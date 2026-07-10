@@ -10,6 +10,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Locale;
 
 public class FastPlayerLookup implements Listener {
     private static final Map<String, UUID> onlinePlayers = new ConcurrentHashMap<>();
@@ -19,18 +20,18 @@ public class FastPlayerLookup implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        onlinePlayers.put(player.getName().toLowerCase(), player.getUniqueId());
-        recentPlayers.put(player.getName().toLowerCase(), player.getUniqueId());
+        onlinePlayers.put(player.getName().toLowerCase(Locale.ROOT), player.getUniqueId());
+        recentPlayers.put(player.getName().toLowerCase(Locale.ROOT), player.getUniqueId());
         trimRecentCache();
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        onlinePlayers.remove(event.getPlayer().getName().toLowerCase());
+        onlinePlayers.remove(event.getPlayer().getName().toLowerCase(Locale.ROOT));
     }
 
     public static UUID lookupPlayer(String name) {
-        String lowercaseName = name.toLowerCase();
+        String lowercaseName = name.toLowerCase(Locale.ROOT);
         UUID onlineUUID = onlinePlayers.get(lowercaseName);
         if (onlineUUID != null) {
             return onlineUUID;
@@ -40,14 +41,13 @@ public class FastPlayerLookup implements Listener {
             return recentUUID;
         }
         Player player = Bukkit.getPlayerExact(name);
-        if (player != null) {
-            UUID uuid = player.getUniqueId();
-            recentPlayers.put(lowercaseName, uuid);
-            trimRecentCache();
-            return uuid;
-        }
+        if (player == null)
+            return null;
 
-        return null;
+        UUID uuid = player.getUniqueId();
+        recentPlayers.put(lowercaseName, uuid);
+        trimRecentCache();
+        return uuid;
     }
 
     private static void trimRecentCache() {
@@ -57,7 +57,7 @@ public class FastPlayerLookup implements Listener {
     }
 
     public static void addToRecentCache(String name, UUID uuid) {
-        recentPlayers.put(name.toLowerCase(), uuid);
+        recentPlayers.put(name.toLowerCase(Locale.ROOT), uuid);
         trimRecentCache();
     }
 }

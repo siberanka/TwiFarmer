@@ -1,8 +1,8 @@
 name: Farmer
-author: Geik, WaterArchery, adabugra, Amowny, Dsngxddd
+author: Geik, WaterArchery, adabugra, Amowny, Dsngxddd, siberanka
 main: xyz.geik.farmer.Main
-version: v6-b112
-api-version: 1.13
+version: v6-b114
+api-version: "1.21"
 softdepend: [PlaceholderAPI, Vault, RoyaleEconomy, PlayerPoints, GrinGotts, ElementalGems, ASkyBlock, BentoBox, SuperiorSkyblock2, GriefPrevention, FabledSkyBlock, Lands, IridiumSkyblock, UltimateClaims]
 loadbefore: [AutoPickup]
 folia-supported: true

@@ -18,6 +18,7 @@ import xyz.geik.glib.shades.inventorygui.InventoryGui;
 import xyz.geik.glib.shades.inventorygui.StaticGuiElement;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +60,7 @@ public class UsersGui {
                 GuiHelper.getAddUserItem(player),
                 1,
                 click -> {
+                    UUID playerId = player.getUniqueId();
                     if (User.getUserAmount(player) <= farmer.getUsers().size()) {
                         ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getReachedMaxUser());
                         return true;
@@ -67,19 +69,20 @@ public class UsersGui {
                     if (!farmer.getOwnerUUID().equals(player.getUniqueId())
                             && !player.hasPermission("farmer.admin")) {
                         ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getNoPerm());
-                        ChatEvent.getPlayers().remove(player.getName());
+                        ChatEvent.clearPlayer(playerId);
                         return true;
                     }
                     // Optimize player adding to chat event
-                    ChatEvent.getPlayers().putIfAbsent(player.getName(), farmer.getRegionID());
+                    String regionId = farmer.getRegionID();
+                    ChatEvent.getPlayers().put(playerId, regionId);
 
                     ChatUtils.sendMessage(player,
                             Main.getLangFile().getMessages().getWaitingInput(),
                             new Placeholder("{cancel}", Main.getLangFile().getVarious().getInputCancelWord()));
                     // Removes player from cache of ChatEvent catcher after 6 seconds
                     Main.getMorePaperLib().scheduling().entitySpecificScheduler(player).runDelayed(() -> {
-                        if (ChatEvent.getPlayers().containsKey(player.getName())) {
-                            ChatEvent.getPlayers().remove(player.getName());
+                        if (ChatEvent.getPlayers().remove(playerId, regionId)) {
+                            ChatEvent.clearPlayer(playerId);
                             ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getInputCancel());
                         }
                     }, null, 120L);

@@ -27,6 +27,7 @@ import xyz.geik.glib.shades.xseries.messages.Titles;
 
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Command(value = "farmer", alias = {"farm", "çiftçi", "fm", "ciftci"})
 public class FarmerCommand extends BaseCommand {
+    private static final AtomicBoolean RELOADING = new AtomicBoolean();
 
     /**
      * Default command of farmer
@@ -186,31 +188,60 @@ public class FarmerCommand extends BaseCommand {
     @Permission("farmer.admin")
     @SubCommand(value = "reload", alias = {"rl", "yenile"})
     public void reloadCommand(@NotNull CommandSender sender) {
+        if (!RELOADING.compareAndSet(false, true)) {
+            sendReloadMessage(sender, "&eFarmer reload is already in progress.");
+            return;
+        }
+
+        long startedAt = System.currentTimeMillis();
         Main.getMorePaperLib().scheduling().asyncScheduler().run(() -> {
-            long time = System.currentTimeMillis();
-            // Saves all farmer
-            Main.getSql().updateAllFarmers();
-            // Clears cached farmers
-            FarmerManager.getFarmers().clear();
-            // Regenerates settings
-            Main.getConfigFile().load(true);
-            Main.getLangFile().load(true);
-            // Reloading items it also clears old list
-            // Reloading levels it also clears old list
-            CacheLoader.loadAllItems();
-            CacheLoader.loadAllLevels();
-            // Reloading farmers again.
-            Main.getSql().loadAllFarmers();
-            Main.getInstance().getModuleManager().reloadModules();
+            try {
+                Main.getSql().updateAllFarmers();
+                Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
+                    try {
+                        Main.getConfigFile().load(true);
+                        Main.getLangFile().load(true);
+                        CacheLoader.loadAllItems();
+                        CacheLoader.loadAllLevels();
+                        Main.getInstance().getModuleManager().reloadModules();
+                        FarmerModule.calculateModulesUseGui();
+                        WorldHelper.loadAllowedWorlds();
 
-            // TODO IMPLEMENT MODULE RELOAD WITH MODULEHELPER CLASS
-
-            FarmerModule.calculateModulesUseGui();
-            WorldHelper.loadAllowedWorlds();
-            // Sends message to sender who send this command and also calculating millisecond difference.
-            ChatUtils.sendMessage(sender, Main.getLangFile().getMessages().getReloadSuccess(),
-                    new Placeholder("%ms%", System.currentTimeMillis() - time + "ms"));
+                        Main.getSql().loadAllFarmersAsync(
+                                () -> notifyReloadSuccess(sender, startedAt),
+                                () -> notifyReloadFailure(sender, "&cFarmer reload failed while loading database data."));
+                    } catch (Exception exception) {
+                        Main.getInstance().getLogger().severe("Farmer reload failed: " + exception.getMessage());
+                        notifyReloadFailure(sender, "&cFarmer reload failed. Check the server log.");
+                    }
+                });
+            } catch (Exception exception) {
+                Main.getInstance().getLogger().severe("Farmer reload failed while saving data: " + exception.getMessage());
+                notifyReloadFailure(sender, "&cFarmer reload failed. Check the server log.");
+            }
         });
+    }
+
+    private void notifyReloadSuccess(CommandSender sender, long startedAt) {
+        RELOADING.set(false);
+        sendReloadMessage(sender, Main.getLangFile().getMessages().getReloadSuccess(),
+                new Placeholder("%ms%", System.currentTimeMillis() - startedAt + "ms"));
+    }
+
+    private void notifyReloadFailure(CommandSender sender, String message) {
+        RELOADING.set(false);
+        sendReloadMessage(sender, message);
+    }
+
+    private void sendReloadMessage(CommandSender sender, String message, Placeholder... placeholders) {
+        Runnable notification = () -> {
+            ChatUtils.sendMessage(sender, message, placeholders);
+        };
+        if (sender instanceof Player) {
+            Main.getMorePaperLib().scheduling().entitySpecificScheduler((Player) sender).run(notification, null);
+        } else {
+            Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(notification);
+        }
     }
 
     /**

@@ -1,6 +1,10 @@
 # Farmer
 Collects products of a region or island and store them in inventory of himself.
 
+## Platform Support
+
+Farmer v6-b114 is built against Paper API 26.1.2 while retaining `api-version: "1.21"` for Paper 1.21.x compatibility. Paper, Leaf, and Folia are supported. Plain Bukkit and Spigot servers are intentionally rejected at startup.
+
 ## How it's work?
 This plugin creates a virtual assistant that collects items on your behalf within your designated region or island. This assistant, known as the 'Farmer,' can be purchased using in-game currency. Owners have the ability to add users to the assistant and grant them permission to sell items through it. Additionally, the owner can deactivate the collection feature and level up the Farmer via the management GUI. Within the Farmer's GUI, stock availability is displayed using colors and percentage indicators.
 
@@ -431,7 +435,7 @@ public class Main extends JavaPlugin {
 
 * [BStats](https://bstats.org)
 * [lombok (LATEST)](https://github.com/projectlombok/lombok)
-* [spigot-api (1.20-R0.3-SNAPSHOT)](https://hub.spigotmc.org/stash/projects/SPIGOT/repos/spigot/browse)
+* [paper-api (26.1.2)](https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/)
 * [GLib](https://mvnrepository.com/artifact/com.mojang/authlib/1.5.25)
 * [WildStacker](https://github.com/BG-Software-LLC/WildStacker)
 * [SpawnerMeta](https://www.spigotmc.org/resources/spawnermeta-fully-customizable-upgradable-modifiable-spawners-1-14-1-20.74188/)

@@ -11,9 +11,10 @@ import xyz.geik.farmer.model.FarmerLevel;
 import xyz.geik.farmer.model.user.FarmerPerm;
 import xyz.geik.farmer.model.user.User;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Farmer Manager class manages all farmer related methods.
@@ -31,7 +32,7 @@ public class FarmerManager {
      * @see Farmer
      */
     @Getter
-    public static HashMap<String, Farmer> farmers = new HashMap<>();
+    public static final Map<String, Farmer> farmers = new ConcurrentHashMap<>();
 
     /**
      * <b>DANGER</b> - Use with caution.

@@ -18,6 +18,7 @@ import xyz.geik.farmer.database.SQLite;
 import xyz.geik.farmer.helpers.*;
 import xyz.geik.farmer.integrations.Integrations;
 import xyz.geik.farmer.listeners.ListenerRegister;
+import xyz.geik.farmer.listeners.backend.ChatEvent;
 import xyz.geik.farmer.modules.FarmerModule;
 import xyz.geik.farmer.shades.storage.Config;
 import xyz.geik.glib.GLib;
@@ -102,22 +103,37 @@ public class Main extends JavaPlugin {
     @Getter
     private static BukkitCommandManager<CommandSender> commandManager;
 
+    private boolean paperFamilyServer;
 
     /**
      * Loading files before enable
      */
+    @Override
     public void onLoad() {
         instance = this;
+        if (!isPaperFamilyServer()) {
+            getLogger().severe("Farmer requires a Paper-family server (Paper, Leaf, or Folia).");
+            getLogger().severe("Plain Bukkit and Spigot servers are intentionally unsupported.");
+            return;
+        }
+
+        paperFamilyServer = true;
         simplixStorageAPI = new SimplixStorageAPI(this);
         setupFiles();
         setupDatabase();
     }
 
     /**
-     * onEnable method calls from spigot api.
+     * onEnable method called by the server runtime.
      * This is sort of the main(String... args) method.
      */
+    @Override
     public void onEnable() {
+        if (!paperFamilyServer) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         morePaperLib = new MorePaperLib(this);
         FarmerAPI.getFarmerManager();
         Integrations.registerIntegrations();
@@ -136,16 +152,36 @@ public class Main extends JavaPlugin {
     }
 
     /**
-     * disable method calls from spigot api.
+     * disable method called during server shutdown.
      * executing it right before close.
      * async tasks can be fail because server
      * can't handle async tasks while shutting down
      */
+    @Override
     public void onDisable() {
-        getSql().updateAllFarmers();
-        CommandHelper.unregisterCommands();
-        ModuleHelper moduleHelper = ModuleHelper.getInstance();
-        moduleHelper.unloadModules();
+        if (!paperFamilyServer)
+            return;
+
+        ChatEvent.clearPendingPlayers();
+        if (getSql() != null)
+            getSql().updateAllFarmers();
+        if (getCommandManager() != null)
+            CommandHelper.unregisterCommands();
+        if (getModuleManager() != null)
+            ModuleHelper.getInstance().unloadModules();
+    }
+
+    private boolean isPaperFamilyServer() {
+        return hasPaperApi();
+    }
+
+    private boolean hasPaperApi() {
+        try {
+            Class.forName("io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager", false, getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError ignored) {
+            return false;
+        }
     }
 
     /**
@@ -172,7 +208,7 @@ public class Main extends JavaPlugin {
             levelFile = getSimplixStorageAPI().initConfig("levels");
             WorldHelper.loadAllowedWorlds();
         } catch (Exception exception) {
-            getPluginLoader().disablePlugin(this);
+            getServer().getPluginManager().disablePlugin(this);
             throw new RuntimeException("Error loading configuration file");
         }
     }

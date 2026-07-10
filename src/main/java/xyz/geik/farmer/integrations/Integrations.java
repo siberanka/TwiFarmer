@@ -64,7 +64,7 @@ public abstract class Integrations {
      * and loads integration class of it.
      */
     public static void registerIntegrations() {
-        Main.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> {
+        Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
             if (Bukkit.getPluginManager().isPluginEnabled("SuperiorSkyblock2"))
                 Main.setIntegration(new SuperiorSkyblock());
             else if (Bukkit.getPluginManager().isPluginEnabled("GriefPrevention"))
@@ -86,6 +86,6 @@ public abstract class Integrations {
             else if (Bukkit.getPluginManager().isPluginEnabled("RClaim")) {
                 Main.setIntegration(new RClaim());
             }
-        }, 1L);
+        });
     }
 }

@@ -21,10 +21,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * SQL Queries and abstracted methods exist in this class
@@ -33,6 +39,16 @@ import java.util.UUID;
  * @author Amowny
  */
 public abstract class SQL {
+
+    private static final class OwnerData {
+        private final UUID uuid;
+        private final String name;
+
+        private OwnerData(UUID uuid, String name) {
+            this.uuid = uuid;
+            this.name = name;
+        }
+    }
 
     /**
      * Constructor of class
@@ -73,6 +89,29 @@ public abstract class SQL {
      * Loads all farmer data from sql to cache
      */
     public void loadAllFarmers() {
+        loadAllFarmers(() -> {});
+    }
+
+    /**
+     * Reads farmer data off-thread and swaps the cache on the global region.
+     *
+     * @param onComplete task executed after a successful cache replacement
+     */
+    public void loadAllFarmersAsync(@NotNull Runnable onComplete) {
+        loadAllFarmersAsync(onComplete, () -> {});
+    }
+
+    /**
+     * Loads the cache in the async scheduler and reports the result on the global region.
+     */
+    public void loadAllFarmersAsync(@NotNull Runnable onComplete, @NotNull Runnable onFailure) {
+        Main.getMorePaperLib().scheduling().asyncScheduler().run(() -> {
+            if (!loadAllFarmers(onComplete))
+                Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(onFailure);
+        });
+    }
+
+    private boolean loadAllFarmers(@NotNull Runnable onComplete) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -80,6 +119,7 @@ public abstract class SQL {
         final String FARMER_QUERY = "SELECT * FROM Farmers;";
         // Query of farmer users
         final String USERS_QUERY = "SELECT * FROM FarmerUsers WHERE farmerId = ?";
+        Map<String, Farmer> loadedFarmers = new HashMap<>();
         int loadedCount = 0; // Yüklenen farmer sayısı
         try {
             connection = Main.getDatabase().getConnection();
@@ -115,17 +155,23 @@ public abstract class SQL {
                 }
                 Farmer farmer = new Farmer(farmerID, regionID, users, inv, level, state);
                 FarmerModule.databaseGetAttributes(connection, farmer);
-                FarmerManager.getFarmers().put(regionID, farmer);
+                loadedFarmers.put(regionID, farmer);
                 loadedCount++; // Sayacı artır
             }
             final int finalLoadedCount = loadedCount;
+            final Map<String, Farmer> finalLoadedFarmers = loadedFarmers;
             Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
+                FarmerManager.getFarmers().clear();
+                FarmerManager.getFarmers().putAll(finalLoadedFarmers);
                 FarmerLoadedEvent loadedEvent = new FarmerLoadedEvent(finalLoadedCount);
                 Bukkit.getPluginManager().callEvent(loadedEvent);
+                onComplete.run();
             });
+            return true;
 
-        } catch (SQLException throwables) {
+        } catch (Exception throwables) {
             Main.getInstance().getLogger().info("Error while loading Farmers: " + throwables.getMessage());
+            return false;
         } finally {
             closeConnections(preparedStatement, connection, resultSet);
         }
@@ -365,8 +411,10 @@ public abstract class SQL {
         Main.getInstance().getLogger().info("Preparing data for fix please wait...");
         Main.getMorePaperLib().scheduling().asyncScheduler().runDelayed(() -> {
             long ms = System.currentTimeMillis();
-            FarmerManager.getFarmers().clear();
-            fixUsersInDatabase(ms);
+            Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
+                FarmerManager.getFarmers().clear();
+                Main.getMorePaperLib().scheduling().asyncScheduler().run(() -> fixUsersInDatabase(ms));
+            });
         }, Duration.ofMillis(200L * 50L));
     }
 
@@ -415,9 +463,11 @@ public abstract class SQL {
             while (resultSet.next()) {
                 int farmerID = resultSet.getInt("id");
                 String regionID = resultSet.getString("regionID");
-                OfflinePlayer owner = Bukkit.getOfflinePlayer(Main.getIntegration().getOwnerUUID(regionID));
-                this.addUser(owner.getUniqueId(), owner.getName(), FarmerPerm.OWNER, farmerID);
-                Main.getInstance().getLogger().info("Fixed owner in database " + owner.getName());
+                OwnerData owner = resolveOwnerOnGlobalRegion(regionID);
+                if (owner == null)
+                    continue;
+                this.addUser(owner.uuid, owner.name, FarmerPerm.OWNER, farmerID);
+                Main.getInstance().getLogger().info("Fixed owner in database " + owner.name);
             }
         } catch (SQLException throwables) {
             Main.getInstance().getLogger().info("Error while trying to fix database: " + throwables.getMessage());
@@ -425,9 +475,39 @@ public abstract class SQL {
             closeConnections(statement, connection, null);
             Main.getInstance().getLogger().info("Farmer fixing owners completed.");
             Main.getMorePaperLib().scheduling().asyncScheduler().runDelayed(() -> {
-                loadAllFarmers();
-                Main.getInstance().getLogger().info("Fixing database task has completed in " + (System.currentTimeMillis() - ms) + "ms");
+                loadAllFarmersAsync(() -> Main.getInstance().getLogger().info(
+                        "Fixing database task has completed in " + (System.currentTimeMillis() - ms) + "ms"));
             }, Duration.ofMillis(200L * 50L));
         }
+    }
+
+    private OwnerData resolveOwnerOnGlobalRegion(String regionId) {
+        if (Main.getIntegration() == null)
+            return null;
+
+        CompletableFuture<OwnerData> ownerData = new CompletableFuture<>();
+        Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
+            try {
+                UUID ownerUuid = Main.getIntegration().getOwnerUUID(regionId);
+                if (ownerUuid == null) {
+                    ownerData.complete(null);
+                    return;
+                }
+                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUuid);
+                String name = owner.getName();
+                ownerData.complete(new OwnerData(ownerUuid, name == null ? ownerUuid.toString() : name));
+            } catch (Exception exception) {
+                ownerData.completeExceptionally(exception);
+            }
+        });
+
+        try {
+            return ownerData.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException | TimeoutException exception) {
+            Main.getInstance().getLogger().warning("Unable to resolve farmer owner for region " + regionId + ".");
+        }
+        return null;
     }
 }
