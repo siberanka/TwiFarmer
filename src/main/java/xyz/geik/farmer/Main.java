@@ -17,6 +17,7 @@ import xyz.geik.farmer.database.SQL;
 import xyz.geik.farmer.database.SQLite;
 import xyz.geik.farmer.helpers.*;
 import xyz.geik.farmer.integrations.Integrations;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.listeners.ListenerRegister;
 import xyz.geik.farmer.listeners.backend.ChatEvent;
 import xyz.geik.farmer.modules.FarmerModule;
@@ -147,6 +148,7 @@ public class Main extends JavaPlugin {
         sendEnableMessage();
         getSql().loadAllFarmers();
         new ListenerRegister();
+        BedrockMenus.initialize();
         loadMetrics();
         registerModules();
     }
@@ -163,6 +165,7 @@ public class Main extends JavaPlugin {
             return;
 
         ChatEvent.clearPendingPlayers();
+        BedrockMenus.shutdown();
         if (getSql() != null)
             getSql().updateAllFarmers();
         if (getCommandManager() != null)

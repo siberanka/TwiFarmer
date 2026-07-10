@@ -76,6 +76,68 @@ public class tr extends LangFile {
         private String notEnoughArguments = "{prefix} &cYetersiz argüman girildi!";
         private String tooManyArguments = "{prefix} &cÇok fazla agüman girildi!";
         private String noPerm = "{prefix} &cBunun için yetkin yok!";
+        private String reloadInProgress = "{prefix} &eÇiftçi yenileme işlemi zaten devam ediyor.";
+        private String reloadDatabaseFailed = "{prefix} &cVeritabanı verileri yüklenirken yenileme başarısız oldu.";
+        private String reloadFailed = "{prefix} &cÇiftçi yenilenemedi. Sunucu kayıtlarını kontrol et.";
+        private String farmerDataUnavailable = "{prefix} &cÇiftçi verisi artık kullanılamıyor.";
+        private String bedrockFormError = "{prefix} &cBedrock menüsü işlenemedi. Lütfen tekrar dene.";
+        private String bedrockFormExpired = "{prefix} &eBu Bedrock menüsünün süresi doldu. Menüyü yeniden aç.";
+        private String bedrockFormCooldown = "{prefix} &eBaşka bir menü işlemi seçmeden önce biraz bekle.";
+    }
+
+    private Commands commands = new Commands();
+
+    @Getter
+    @Setter
+    public static class Commands extends LangFile.Commands {
+        private List<String> about = Arrays.asList(
+                "&7&m----------------------------------------",
+                "&3          ÇİFTÇİ &7- &6{version}",
+                "&3Geliştirenler: &c{authors}",
+                "&3Discord: &b&ohttps://discord.gg/yP7jQdvc6d",
+                "&3Web sitesi: &d&ohttps://geik.xyz",
+                "&7&m----------------------------------------",
+                "&aBölge API: &7{api}",
+                "&aEkonomi API: &7{economy}",
+                "&aAktif Çiftçi: &7{farmer_count}",
+                "&aDil: &7{language}",
+                "&aModüller: &7{modules}",
+                "&7&m----------------------------------------"
+        );
+        private List<String> infoHeader = Arrays.asList(
+                "&c----------------------",
+                "&bBölge ID: &f{region}",
+                "&bID: &f{id}",
+                "&bSahip: &f{owner}",
+                "&bSeviye: &f{level}",
+                "&c----------------------"
+        );
+        private String infoUser = "&b{player} &f- &3{role}";
+        private String infoItem = "&6{material} &e{amount}";
+        private String infoModule = "&a{key} &f- &3{value}";
+        private String infoSeparator = "&c----------------------";
+    }
+
+    private BedrockForms bedrockForms = new BedrockForms();
+
+    @Getter
+    @Setter
+    public static class BedrockForms extends LangFile.BedrockForms {
+        private String content = "Bir işlem seç.";
+        private String empty = "Bu menüde kullanılabilir bir işlem yok.";
+        private String page = "Sayfa {page}/{pages}";
+        private String previous = "Önceki Sayfa";
+        private String next = "Sonraki Sayfa";
+        private String back = "Geri";
+        private String leftClick = "Bir Yığın Çek";
+        private String rightClick = "Alabildiğin Kadar Çek";
+        private String shiftRightClick = "Tümünü Sat";
+        private String changeRole = "Üye Rolünü Değiştir";
+        private String remove = "Üyeyi Kaldır";
+        private String moduleLeftClick = "Birincil İşlem";
+        private String moduleRightClick = "İkincil İşlem";
+        private String moduleShiftRightClick = "Alternatif İşlem";
+        private String moduleDropClick = "Modül İşlemi";
     }
 
     private Various various = new Various();

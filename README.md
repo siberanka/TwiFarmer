@@ -1,477 +1,111 @@
 # Farmer
-Collects products of a region or island and store them in inventory of himself.
 
-## Platform Support
+Farmer is a Paper plugin that collects configured drops inside supported regions and islands, stores them in a virtual inventory, and provides controlled selling, withdrawal, user management, upgrades, and module actions.
 
-Farmer v6-b114 is built against Paper API 26.1.2 while retaining `api-version: "1.21"` for Paper 1.21.x compatibility. Paper, Leaf, and Folia are supported. Plain Bukkit and Spigot servers are intentionally rejected at startup.
+## Compatibility
 
-## How it's work?
-This plugin creates a virtual assistant that collects items on your behalf within your designated region or island. This assistant, known as the 'Farmer,' can be purchased using in-game currency. Owners have the ability to add users to the assistant and grant them permission to sell items through it. Additionally, the owner can deactivate the collection feature and level up the Farmer via the management GUI. Within the Farmer's GUI, stock availability is displayed using colors and percentage indicators.
+| Component | Support |
+| --- | --- |
+| Paper 1.21.x | Supported |
+| Paper 26.x | Supported and used for compilation |
+| Leaf | Supported |
+| Folia | Supported |
+| Plain Bukkit / Spigot | Not supported; startup is rejected |
+| Geyser / Floodgate | Optional native Bedrock forms |
 
-As an administrator, you can control the Farmers just as if you were the owner. You can configure items, levels, and more through the configuration settings.
+Farmer v6-b115 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
 
-Simultaneously, this plugin enforces automatic updates to the language file, eliminating the need for a reload command to update itself. (Please note that configuration changes still require a reload due to potentially sensitive settings.) You can design your menus using the language file.
+## Features
 
-# Modules
+- Region and island integration with configurable collection rules.
+- Virtual per-farmer storage, levels, capacity, tax, and economy support.
+- Owner, member, and coop access controls.
+- Configurable selling, item withdrawal, user management, and module menus.
+- English and Turkish language files, with module-provided locales supported.
+- Native Bedrock forms without changing the Java inventory experience.
+- Public APIs and Bukkit events for modules and integrations.
 
-- [Voucher](https://github.com/Geik-xyz/Farmer-Voucher) - Egg module for farmer. When use, spawns farmer.
-- [SpawnerKiller](https://github.com/Geik-xyz/Farmer-SpawnerKiller) - Automatically kills spawner creatures.
-- [SellCommand](https://github.com/Geik-xyz/Farmer-SellCommand) - Sell stocked items with command.
-- [AutoSell](https://github.com/Geik-xyz/Farmer-AutoSell) - AutoSells stocked items.
-- [AutoHarvest](https://github.com/Geik-xyz/Farmer-AutoHarvest) - Auto Harvest crop items.
-- ProductionCalc - Automatically calculates (Hour, Min, Sec) production for an item. (Built in)
+## Bedrock Forms
 
-## Supported Languages
-* **English** (Full)
-* **Turkish** (Full)
-* **German** (Only Modules)
+When Floodgate or Geyser is installed, connected Bedrock players automatically receive native Cumulus forms. Java players continue to receive the existing inventory menus.
 
-> You can write your language keyword in config. (Format: en, tr, de)
+The form adapter covers the purchase, storage, management, user, and module menus. Items added to the module menu through `FarmerModuleGuiCreateEvent` are included automatically. Inventory page controls are replaced by native form pagination, and only elements explicitly identified as fillers are omitted. Functional items are never hidden merely because they use stained glass or another decorative-looking material.
 
-## Configuration and Lang File
-#### (Maybe OUTDATED version of config and lang file)
-<details>
-  <summary>config.yml</summary>
-    # Main settings of farmer
-    settings:
-    # if you want to give farmer with economy leave it true
-    buyFarmer: true
-    # price of farmer necessary if buyFarmer is true
-    farmerPrice: 1000
-    # crates farmer automatically (If plugin supports)
-    # also bypass money requirement
-    autoCreateFarmer: false
-    # default farmer user value
-    # you can give farmer.user.<amount> perm to owner of farmer
-    defaultMaxFarmerUser: 3
-    # language from lang file
-    lang: en
-    # farmer ignore collecting if item dropped by player
-    ignorePlayerDrop: false
-    # Allowed worlds
-    allowedWorlds:
-    - ASkyBlock
-      - Island
-      - SuperiorWorld
-      - bskyblock_world
-    
-    # Tax rate
-    # If you set it 0 then it useless
-    # If you want to deposit tax amount to a player
-    # use depositUser and set true the deposit settings
-    tax:
-    rate: 20
-    deposit: false
-    depositUser: Geyik
-    
-    # Farmer levels
-    # Each level must has capacity and reqMoney
-    # First level must has capacity only
-    # Other settings are optional like reqPerm and tax
-    # If you want to make custom tax for a level then add tax: 1 etc.
-    # If you want to set a perm for level to purchase then add reqPerm: "my.perm"
-    levels:
-    first:
-        capacity: 1000
-    second:
-        capacity: 2000
-        reqMoney: 5000
-    third:
-        capacity: 10000
-        reqMoney: 8000
-        reqPerm: "my.custom.perm"
-        tax: 15
-</details>
+Form responses are fail-closed and protected by a unique, single-use session. Farmer validates the active session, response index, timeout, cooldown, player state, and menu action before dispatching it on the player's Folia-safe scheduler. Sessions are removed when a form is replaced, a player disconnects, the plugin reloads, or the plugin disables. The adapter does not add click sounds, preventing duplicate inventory/form feedback.
 
-<details>
-    <summary>lang.yml</summary>
-    # placeholders: {money} money which deposited to player {tax} tax amount.
-    sellComplete: "&6Farmer &8▸ &aItems sold. &6Profit: &e{money}&f, &6Tax: &e{tax}"
-    wrongWorld: "&6Farmer &8▸ &cYou cannot do this in this world."
-    noPerm: "&6Farmer &8▸ &cYou don't have permission!"
-    noRegion: "&6Farmer &8▸ &cThere is no region for bound a farmer."
-    removedFarmer: "&6Farmer &8▸ &aRemoved farmer successfully."
-    noFarmer: "&6Farmer &8▸ &cThere is no farmer bound here."
-    mustBeOwner: "&6Farmer &8▸ &cYou must to be Region Owner for this."
-    inventoryFull: "&6Farmer &8▸ &cInventory full!"
-    # placeholders: {money} players money {req_money} required money.
-    notEnoughMoney: "&6Farmer &8▸ &cDon't have enough money! Required: &4{req_money}"
-    # placeholders: {level} new upgraded level {capacity} new upgraded capacity.
-    levelUpgraded: "&6Farmer &8▸ &aFarmer upgraded to &6{level}&a level. &2New Capacity: &e{capacity}"
-    # placeholders: {status} shows status of farmer status. (#toggledON, #toggledOFF)
-    toggleFarmer: "&6Farmer &8▸ &aFarmers collection settings changed to: &e{status}"
-    toggleON: "&aActive"
-    toggleOFF: "&cDisabled"
-    featureDisabled: "&6Farmer &8▸ &cThis feature disallowed."
-    reloadSuccess: "&6Farmer &8▸ &aConfig reloaded successfully. It took %ms%"
-    boughtFarmer: "&6Farmer &8▸ &aFarmer bought successfully."
-    # placeholders: {time} left for do it again.
-    inCooldown: "&6Farmer &8▸ &cYou should wait {time}s for do it again."
-    inputCancelWord: "cancel"
-    waitingInput: "&6Farmer &8▸ &aType input to chat in 6sec and type &c{cancel} &afor cancel."
-    notOwner: "&6Farmer &8▸ &cYou must be the owner of the region to use this command."
-    inputCancel: "&6Farmer &8▸ &cNo longer waiting for input."
-    userAdded: "&6Farmer &8▸ &2{player} &aAdded successfully."
-    userAlreadyExist: "&6Farmer &8▸ &4{player} &cAlready added."
-    userCouldntFound: "&6Farmer &8▸ &cUser has not played before!"
-    reachedMaxUser: "&6Farmer &8▸ &cYou have reached max user capacity."
-    percentBar: "▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪"
-    buyDisabled:
-      title: "&6Farmer"
-      subtitle: "&cVisit our website for farmer"
-    
-    # Farmer roles
-    roles:
-      owner: "&cOwner"
-      member: "&aMember"
-      coop: "&eCoop"
-    
-    nextPage:
-      # Placeholder: %nextpage% shows next page index.
-      name: "&eNext Page (%nextpage%)"
-    previousPage:
-      # Placeholder: %prevpage% shows previous page index.
-      name: "&ePrevious Page (%prevpage%)"
-    guiFiller:
-      use: true
-      material: GRAY_STAINED_GLASS_PANE
-    # MAIN GUI
-    Gui:
-      # m -> Management Panel item
-      # g -> Item Group element item
-      # p -> Previous Page item
-      # n -> Next Page item
-      # h -> Help item
-      interface:
-        - "    m    "
-        - " ggggggg "
-        - " ggggggg "
-        - " ggggggg "
-        - " ggggggg "
-        - "p   h   n"
-      guiName: "&8Farmer Storage"
-      manage:
-        # If you don't want skull you can remove "skull" and create "material: (YOUR_MATERIAL_HERE)"
-        skull: "ewogICJ0aW1lc3RhbXAiIDogMTYyMDM5NzA2MjE1MSwKICAicHJvZmlsZUlkIiA6ICI0ZGI2MWRkOTM0Mzk0M2M0YjhhOTZiNDQwMWM3MDM1MCIsCiAgInByb2ZpbGVOYW1lIiA6ICJiZWVyYmVsbHltYW4iLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2MyZTgxOTkwNmViMTc5NDM5YjhkZDU1NTExMzJlNTRlYjQ3MTczZTBmNDU4ODYxYWQyYThjOTM3OTE4Mzg5MSIKICAgIH0KICB9Cn0="
-        name: "&eManagement Panel"
-        lore:
-          - '&7Only region owner can'
-          - '&7open this panel.'
-          - ''
-          - '&dFarmer Stats:'
-          - ' &8▪ &7Level: &6{level}'
-          - ' &8▪ &7Capacity: &6{capacity}'
-          - ' &8▪ &7Tax Rate: &6{tax}'
-          - ''
-          - '&aClick for management panel!'
-      help:
-        # If you don't want skull you can remove "skull" and create "material: (YOUR_MATERIAL_HERE)"
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjE2Y2M1NzU1Y2RkMjYwZjdiNGI1YzFhMWYxZjNiZDMxODUxZmMxZDk4Yjc0NDM3YjJmYjRiZDZlYjhkMiJ9fX0="
-        name: "&eInformation"
-        lore:
-          - '&7This is inventory of Farmer.'
-          - '&7Farmer stores items here.'
-          - '&7What you can do here:'
-          - ' &8▪ &6Sell items'
-          - ' &8▪ &6Take items to inventory'
-          - ' &8▪ &6Management panel (Only Leader)'
-          - ''
-          - '&cIf you are coop you can'
-          - '&conly see this menu.'
-      # Placeholders:
-      # {stock} Shows how many item farmer have.
-      # {maxstock} Shows maximum stock of farmer.
-      # {percent} Shows stock fullness percent.
-      # {bar} Shows percent in bar format. Uses #percentBar.
-      # {price} Shows item price (each).
-      # {stack_price} Shows item stack price (Basically multiplies price x64)
-      groupItem:
-        lore:
-          - ""
-          - " &8▪ &7Stock: &f{stock}&8/&c{maxstock}"
-          - " &8▪ &7Price: &f{price}$ each"
-          - "&8&l  [{bar}&8&l] &r{percent}%"
-          - ""
-          - "&7Average Production (min): &f{prod_min}"
-          - "&7Average Production (hour): &f{prod_hour}"
-          - "&7Average Production (day): &f{prod_day}"
-          - "{prod_blank}"
-          - "&7Withdraw Stack &8[&eLeft Click&8]"
-          - "&7Withdraw Max &8[&eRight Click&8]"
-          - "&7Sell All &8[&eShift+Right Click&8]"
-          - ""
-          - "&4DANG: &cSell all feature takes"
-          - "&4%{tax} &ctax.!"
-    
-    # Management Gui
-    manageGui:
-      # t -> taking situation icon
-      # l -> level up icon
-      # u -> user management icon
-      interface:
-        - "    m    "
-        - " t  l  u "
-        - "         "
-      guiName: "&8Manager Panel"
-      # Placeholders:
-      # {level} Shows level of farmer.
-      # {max_level} Shows maximum level farmer can be.
-      # {next_level} Shows next level of farmer.
-      # {capacity} Shows farmer capacity.
-      # {next_capacity} Shows the farmer's capacity at the next level.
-      # {req_money} Shows required money of next level.
-      upgradeNext:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWZjNmVjM2I3NTM1NGI0OTIyMmE4OWM2NjNjNGFjYWQ1MjY0ZmI5NzdjYWUyNmYwYjU0ODNhNTk5YzQ2NCJ9fX0="
-        name: '&6{level}. &eLevel Farmer'
-        lore:
-          - ''
-          - ' &8▪ &7New Level: &6{next_level}&7/&c{max_level}'
-          - ' &8▪ &7New Capacity: &e{next_capacity}'
-          - ' &8▪ &7Required Money: &6{req_money}'
-          - ''
-          - '&aClick for upgrade level!'
-      # Placeholders:
-      # {level} Shows level of farmer.
-      # {capacity} Shows farmer capacity.
-      inMaxLevel:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWQ3OGNjMzkxYWZmYjgwYjJiMzVlYjczNjRmZjc2MmQzODQyNGMwN2U3MjRiOTkzOTZkZWU5MjFmYmJjOWNmIn19fQ=="
-        name: '&6{level}. &eLevel Farmer'
-        lore:
-          - '&7Farmer is in max level.'
-          - '&7You cannot upgrade much more.'
-          - ''
-          - ' &8▪ &7Capacity: &6{capacity}'
-      closeFarmer:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDVjNmRjMmJiZjUxYzM2Y2ZjNzcxNDU4NWE2YTU2ODNlZjJiMTRkNDdkOGZmNzE0NjU0YTg5M2Y1ZGE2MjIifX19"
-        name: '&eClose Collecting'
-        lore:
-          - '&7Closes farmer and it will be'
-          - '&7useless until reopen.'
-          - ''
-          - ' &8▪ &7Status: &6{status}'
-          - ''
-          - '&aClick for change!'
-      users:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjg1NDA2MGFhNTc3NmI3MzY2OGM4OTg2NTkwOWQxMmQwNjIyNDgzZTYwMGI2NDZmOTBjMTg2YzY1Yjc1ZmY0NSJ9fX0="
-        name: "&eUser Management"
-        lore:
-          - '&7You can add/remove/modify'
-          - '&7users in here.'
-          - ''
-          - '&aClick for open.'
-      modules:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTZlZmM4NmRiOTIyMTdjNWEzODk2NzJiMjgyNDI3NWU3YTIwNmQ3ZWMwZjJjN2U0Y2E0ODNjNmUxN2M5ZjZkNSJ9fX0="
-        name: "&eModules"
-        lore:
-          - '&7You can modify farmer'
-          - '&7modules in here.'
-          - ''
-          - '&aClick for open.'
-    
-    # Buy Gui (Farmer)
-    buyGui:
-      interface:
-        - "         "
-        - "    b    "
-        - "         "
-      guiName: "&8Buy Farmer"
-      item:
-        skull: "ewogICJ0aW1lc3RhbXAiIDogMTYyMDM5NzA2MjE1MSwKICAicHJvZmlsZUlkIiA6ICI0ZGI2MWRkOTM0Mzk0M2M0YjhhOTZiNDQwMWM3MDM1MCIsCiAgInByb2ZpbGVOYW1lIiA6ICJiZWVyYmVsbHltYW4iLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2MyZTgxOTkwNmViMTc5NDM5YjhkZDU1NTExMzJlNTRlYjQ3MTczZTBmNDU4ODYxYWQyYThjOTM3OTE4Mzg5MSIKICAgIH0KICB9Cn0="
-        name: "&eBuy Farmer"
-        lore:
-          - '&7You can buy farmer by'
-          - '&7clicking this item.'
-          - ''
-          - ' &8▪ &7Price: &6{price}'
-          - ''
-          - '&aClick for buy!'
-    
-    # User gui for farmer
-    usersGui:
-      # h -> help
-      # u -> user
-      # p -> previous page
-      # a -> add
-      # n -> next page
-      interface:
-        - "    h    "
-        - "uuuuuuuuu"
-        - "uuuuuuuuu"
-        - "p   a   n"
-      guiName: "&8Farmer Users"
-      user:
-        lore:
-          - ''
-          - ' &8▪ &7Role: &6{role}'
-          - ''
-          - '&aLeft or Right click for promote/demote'
-          - '&4Shift+Right click for delete'
-      help:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjE2Y2M1NzU1Y2RkMjYwZjdiNGI1YzFhMWYxZjNiZDMxODUxZmMxZDk4Yjc0NDM3YjJmYjRiZDZlYjhkMiJ9fX0="
-        name: "&eInformation"
-        lore:
-          - '&7You can promote/demote/remove'
-          - '&7and add user here.'
-          - ''
-          - '&7Perm Graph:'
-          - ' &8▪ &eCoop can only look farmer.'
-          - ' &8▪ &6Member can sell and take items.'
-          - ' &8▪ &cOwner can do everything.'
-      addUser:
-        skull: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjA1NmJjMTI0NGZjZmY5OTM0NGYxMmFiYTQyYWMyM2ZlZTZlZjZlMzM1MWQyN2QyNzNjMTU3MjUzMWYifX19"
-        name: "&eAdd user"
-        lore:
-          - ''
-          - '&aClick for add user.'
-    
-    moduleGui:
-      interface:
-        - "         "
-        - " s  k  h "
-        - "         "
-      guiName: "&8Farmer Modules"
-</details>
+Bedrock behavior is configured under `bedrock-forms` in `config.yml`:
 
-## Commands
-+ **/farmer** - Open buy or farmer gui depends on do you have it or not
-+ **/farmer manage** - Management gui (Perm: farmer.admin or owner of farmer)
-+ **/farmer about** - Prints all info about farmer (Perm: farmer.admin)
-+ **/farmer info** - Info of farmer which stand on (Perm: farmer.admin)
-+ **/farmer reload** - Reloads plugin (Perm: farmer.admin)
-
-## Images
-
-### Average Production Calculator
-This is a module of Farmer which calculates average of items which farmer collects and shows it in gui. You can disable in module settings.
-
-![Screenshot_1.png](images%2FScreenshot_1.png)
-![Screenshot_2.png](images%2FScreenshot_2.png)
-
-### Main Farmer Gui
-![Screenshot_3.png](images%2FScreenshot_3.png)
-
-### Farmer Management Gui
-(You can see stock, level, collecting status, users and modules if exists)
-
-![Screenshot_4.png](images%2FScreenshot_4.png)
-![Screenshot_5.png](images%2FScreenshot_5.png)
-![Screenshot_6.png](images%2FScreenshot_6.png)
-![Screenshot_7.png](images%2FScreenshot_7.png)
-
-### Modules Gui (If exists and enabled)
-
-![Screenshot_8.png](images%2FScreenshot_8.png)
-
-### User Gui
-![Screenshot_9.png](images%2FScreenshot_9.png)
-![Screenshot_10.png](images%2FScreenshot_10.png)
-
-## API
-[![Farmer JavaDoc](https://github.com/poyrazinan/Farmer-v6/actions/workflows/publish-javadoc-maven.yml/badge.svg)](https://github.com/poyrazinan/Farmer-v6/actions/workflows/publish-javadoc-maven.yml) [![](https://jitpack.io/v/poyrazinan/Farmer-v6.svg)](https://jitpack.io/#poyrazinan/Farmer-v6) [![Java CI with Maven](https://github.com/poyrazinan/Farmer-v6/actions/workflows/maven.yml/badge.svg)](https://github.com/poyrazinan/Farmer-v6/actions/workflows/maven.yml)
-
-### [Javadoc](https://poyrazinan.github.io/Farmer-v6/)
-
-### Maven:
-
-Add this to your pom.xml if you use in maven.
-
-```xml
-<repository>
-    <id>jitpack.io</id>
-    <url>https://jitpack.io</url>
-</repository>
-```
-```xml
-<dependency>
-    <groupId>com.github.Geik-xyz</groupId>
-    <artifactId>Farmer-v6</artifactId>
-    <version>{RELEASE-VERSION}</version>
-</dependency>
+```yaml
+bedrock-forms:
+  enabled: true
+  page-size: 20
+  session-timeout-ms: 30000
+  click-cooldown-ms: 250
+  max-lore-lines: 4
+  max-button-length: 180
 ```
 
-### Gradle:
+Farmer uses the official [Floodgate API](https://geysermc.org/wiki/floodgate/api/) and [Geyser Forms API](https://geysermc.org/wiki/geyser/forms/). These APIs are optional and are not shaded into the Farmer jar.
 
-Add this to your build.gradle if you use in gradle.
+## Module Menus
 
-```groovy
-repositories {
-    maven { url 'https://jitpack.io' }
-}
-```
-```groovy
-dependencies {
-    implementation 'com.github.Geik-xyz:Farmer-v6:{RELEASE-VERSION}'
-}
-```
+Existing modules that add elements during `FarmerModuleGuiCreateEvent` require no Bedrock-specific changes. Farmer converts those elements and exposes primary, secondary, alternate, and module actions as configurable form choices.
 
-### How to use?
-
-FarmerAPI has good javadoc.
-
-You can check it out the farmer javadoc [Java-Doc](https://geik-xyz.github.io/Farmer-v6/)
+Modules with their own nested `InventoryGui` menus can route them through the same form lifecycle:
 
 ```java
-public class Main extends JavaPlugin {
-    // Returns Main class of plugin
-    // You can get most thing on main!
-    Main farmerMain = FarmerAPI.getInstance();
-    // Gets farmer manager
-    FarmerManager farmerManager = FarmerAPI.getFarmerManager();
-}
+InventoryGui gui = createModuleGui(player, farmer);
+FarmerBedrockAPI.openModuleMenu(
+        player,
+        gui,
+        () -> openModuleGui(player, farmer)
+);
 ```
 
-### Listeners
+The fallback opens the normal Java inventory when the player is not connected through Geyser/Floodgate. Module actions should continue to enforce permissions and validate current Farmer state server-side.
 
-* FarmerBoughtEvent
-* FarmerItemCollectEvent
-* FarmerItemProductionEvent
-* FarmerItemSellEvent
-* FarmerMainGuiOpenEvent
-* FarmerModuleGuiCreateEvent
-* FarmerRemoveEvent
-* FarmerStorageFullEvent
+## Localization
 
-## Used Libraries
+Language files are stored in `plugins/Farmer/lang/`. Menu titles, item names, lore, Bedrock form labels, paging controls, action names, command templates, and command/chat responses are configurable there.
 
-* [BStats](https://bstats.org)
-* [lombok (LATEST)](https://github.com/projectlombok/lombok)
-* [paper-api (26.1.2)](https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/)
-* [GLib](https://mvnrepository.com/artifact/com.mojang/authlib/1.5.25)
-* [WildStacker](https://github.com/BG-Software-LLC/WildStacker)
-* [SpawnerMeta](https://www.spigotmc.org/resources/spawnermeta-fully-customizable-upgradable-modifiable-spawners-1-14-1-20.74188/)
-* [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)
-* [commons-lang3](https://mvnrepository.com/artifact/org.apache.commons/commons-lang3)
+Farmer storage entries use the configurable `gui.farmer-gui.items.group-items.name` template and optional per-material `names` map, so servers can localize every displayed stock item instead of relying on client material names.
 
-### Integration Libraries (Optional)
-* [ASkyBlock](https://www.spigotmc.org/resources/askyblock.1220/)
-* [BentoBox](https://www.spigotmc.org/resources/bentobox-bskyblock-acidisland-skygrid-caveblock-aoneblock-boxed.73261/)
-* [FabledSkyblock](https://github.com/craftaro/FabledSkyBlock)
-* [GriefPrevention](https://www.spigotmc.org/resources/griefprevention.1884/)
-* [SuperiorSkyblock2](https://github.com/BG-Software-LLC/SuperiorSkyblock2)
-* [TownyAdvanced](https://www.spigotmc.org/resources/towny-advanced.72694/)
-* [IridiumSkyblock](https://www.spigotmc.org/resources/iridium-skyblock-1-13-1-20-%E2%AD%90now-with-ai%E2%AD%90.62480/)
-* [UltimateClaims](https://songoda.com/product/ultimateclaims-14)
+Notable sections include:
 
-## ★ Big Contributions (Many Thanks) ★
+- `messages`: command, chat, economy, validation, reload, and Bedrock form feedback.
+- `commands`: complete `/farmer about` and `/farmer info` templates.
+- `bedrock-forms`: form content, navigation, stock actions, user actions, and module action labels.
+- `gui`: Java inventory titles, names, and lore.
 
-- Thanks for Newly External JAR module system who developed by @WaterArchery
-- Many thanks for Folia support by @adabugra
-- Many thanks for fixing issues @WaterArchery
-- Economy System Developed by @amownyy
-- MySQL System Developed by @amownyy
+Use `/farmer reload` after editing runtime configuration or language values.
 
-> And also thanks for @Khontrom, @Justman100, @efekurbann, @rudde0, @Heron4gf, @mehmet-27 for improvement and bug fixes!
+## Installation
+
+1. Run Paper, Leaf, or Folia on a Minecraft version supported by this release.
+2. Place `Farmer-v6-b115.jar` in the server's `plugins` directory.
+3. Install Vault and a supported economy provider when economy-backed features are enabled.
+4. Optionally install Geyser and/or Floodgate for native Bedrock forms.
+5. Install a supported region or island plugin and configure allowed worlds.
+6. Start the server, review generated configuration, then restart or run `/farmer reload` after changes.
+
+## Integrations
+
+Farmer includes integrations for BentoBox, SuperiorSkyblock2, FabledSkyBlock, Lands, IridiumSkyblock, ASkyBlock, GriefPrevention, UltimateClaims, Towny, RClaim, and other project-supported providers. Availability depends on the provider version installed on the server.
+
+## Building
+
+The project uses Maven:
+
+```bash
+mvn clean package
+```
+
+The shaded release artifact is written to `target/Farmer-v6-b115.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
 
 ## Contributing
 
-We welcome contributions from the community! If you would like to contribute, please follow these guidelines:
-
-1. Fork the repository and clone it to your local machine.
-2. Make your changes, and ensure that your code is well-tested.
-3. Create a pull request with a detailed description of your changes.
-
-By contributing to this project, you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before opening a pull request or security report.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Farmer is distributed under the terms in [LICENSE](LICENSE).

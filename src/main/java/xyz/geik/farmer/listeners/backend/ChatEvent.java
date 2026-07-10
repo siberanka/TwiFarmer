@@ -64,7 +64,7 @@ public class ChatEvent implements Listener {
         try {
             Farmer farmer = FarmerManager.getFarmers().get(storedRegionID);
             if (farmer == null) {
-                ChatUtils.sendMessage(player, "Error: Could not find farmer data");
+                ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getFarmerDataUnavailable());
                 return;
             }
             if (!farmer.getOwnerUUID().equals(player.getUniqueId())

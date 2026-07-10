@@ -7,6 +7,8 @@ import xyz.geik.farmer.Main;
 import xyz.geik.farmer.helpers.gui.GroupItems;
 import xyz.geik.farmer.helpers.gui.GuiHelper;
 import xyz.geik.farmer.listeners.backend.ChatEvent;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenuKind;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.model.user.FarmerPerm;
 import xyz.geik.farmer.model.user.User;
@@ -123,6 +125,6 @@ public class UsersGui {
         }
 
         gui.addElement(group);
-        gui.show(player);
+        BedrockMenus.openOrJava(player, gui, () -> showGui(player, farmer), BedrockMenuKind.USERS);
     }
 }

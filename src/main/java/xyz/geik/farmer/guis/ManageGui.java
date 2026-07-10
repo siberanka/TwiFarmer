@@ -4,6 +4,8 @@ import org.bukkit.entity.Player;
 import xyz.geik.farmer.Main;
 import xyz.geik.farmer.helpers.PlaceholderHelper;
 import xyz.geik.farmer.helpers.gui.GuiHelper;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenuKind;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.model.FarmerLevel;
 import xyz.geik.farmer.modules.FarmerModule;
@@ -109,7 +111,7 @@ public class ManageGui {
                         return true;
                     })
             );
-        gui.show(player);
+        BedrockMenus.openOrJava(player, gui, () -> showGui(player, farmer), BedrockMenuKind.STANDARD);
     }
 
 }

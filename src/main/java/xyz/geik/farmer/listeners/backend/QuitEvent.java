@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import xyz.geik.farmer.Main;
 import xyz.geik.farmer.api.managers.FarmerManager;
 import xyz.geik.farmer.helpers.WorldHelper;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.model.Farmer;
 
 import java.util.UUID;
@@ -33,6 +34,7 @@ public class QuitEvent implements Listener {
     public void onQuitEvent(@NotNull PlayerQuitEvent e) {
         UUID playerId = e.getPlayer().getUniqueId();
         ChatEvent.clearPlayer(playerId);
+        BedrockMenus.clear(e.getPlayer());
         final Location loc = e.getPlayer().getLocation();
         if (Main.getIntegration() == null || !WorldHelper.isFarmerAllowed(loc.getWorld().getName()))
             return;

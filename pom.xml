@@ -6,7 +6,7 @@
 
     <groupId>xyz.geik.farmer</groupId>
     <artifactId>Farmer</artifactId>
-    <version>v6-b114</version>
+    <version>v6-b115</version>
 
     <properties>
         <shaded.package>org.cas.osd.platform.ciam.shaded</shaded.package>
@@ -23,6 +23,19 @@
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>${paper.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Bedrock forms (provided by Floodgate/Geyser at runtime) -->
+        <dependency>
+            <groupId>org.geysermc.floodgate</groupId>
+            <artifactId>api</artifactId>
+            <version>2.2.5-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.geysermc.geyser</groupId>
+            <artifactId>api</artifactId>
+            <version>2.10.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- FabledSkyblock -->
@@ -146,6 +159,11 @@
 
     <!-- Repos -->
     <repositories>
+        <!-- Geyser/Floodgate -->
+        <repository>
+            <id>opencollab</id>
+            <url>https://repo.opencollab.dev/main/</url>
+        </repository>
         <!-- Paper -->
         <repository>
             <id>papermc</id>

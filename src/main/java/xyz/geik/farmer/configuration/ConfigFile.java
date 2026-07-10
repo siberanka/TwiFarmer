@@ -144,6 +144,31 @@ public class ConfigFile extends OkaeriConfig {
      */
     private Gui gui = new Gui();
 
+    @Comment("Bedrock form settings for Geyser and Floodgate players")
+    private BedrockForms bedrockForms = new BedrockForms();
+
+    @Getter
+    @Setter
+    public static class BedrockForms extends OkaeriConfig {
+        @Comment("Use native Bedrock forms when Geyser or Floodgate is available")
+        private boolean enabled = true;
+
+        @Comment("Action buttons displayed on each form page (5-50)")
+        private int pageSize = 20;
+
+        @Comment("Form sessions older than this are rejected (milliseconds)")
+        private long sessionTimeoutMs = 30000L;
+
+        @Comment("Minimum delay between accepted form responses (milliseconds)")
+        private long clickCooldownMs = 250L;
+
+        @Comment("Maximum item lore lines shown in a form button (0-10)")
+        private int maxLoreLines = 4;
+
+        @Comment("Maximum visible characters in a form button (32-512)")
+        private int maxButtonLength = 180;
+    }
+
     /**
      * Gui configuration class
      * @author geik

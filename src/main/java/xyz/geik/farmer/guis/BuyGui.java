@@ -4,6 +4,8 @@ import org.bukkit.entity.Player;
 import xyz.geik.farmer.Main;
 import xyz.geik.farmer.helpers.PlaceholderHelper;
 import xyz.geik.farmer.helpers.gui.GuiHelper;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenuKind;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.glib.chat.ChatUtils;
 import xyz.geik.glib.chat.Placeholder;
@@ -63,6 +65,6 @@ public class BuyGui {
                     return true;
                 })
         );
-        gui.show(player);
+        BedrockMenus.openOrJava(player, gui, () -> showGui(player), BedrockMenuKind.STANDARD);
     }
 }

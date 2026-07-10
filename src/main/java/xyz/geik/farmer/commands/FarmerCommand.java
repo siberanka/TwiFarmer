@@ -12,6 +12,7 @@ import xyz.geik.farmer.guis.BuyGui;
 import xyz.geik.farmer.guis.MainGui;
 import xyz.geik.farmer.helpers.CacheLoader;
 import xyz.geik.farmer.helpers.WorldHelper;
+import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.model.FarmerLevel;
 import xyz.geik.farmer.modules.FarmerModule;
@@ -25,7 +26,6 @@ import xyz.geik.glib.shades.triumphteam.cmd.core.annotation.Default;
 import xyz.geik.glib.shades.triumphteam.cmd.core.annotation.SubCommand;
 import xyz.geik.glib.shades.xseries.messages.Titles;
 
-import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -130,19 +130,15 @@ public class FarmerCommand extends BaseCommand {
             ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getNoPerm());
             return;
         }
-        player.sendMessage(ChatUtils.color("&7&m----------------------------------------"));
-        player.sendMessage(ChatUtils.color("&3          FARMER &7- &6" + Main.getInstance().getDescription().getVersion()));
-        player.sendMessage(ChatUtils.color("&3Author: &4Geik"));
-        player.sendMessage(ChatUtils.color("&3Contributors: &c" + Arrays.toString(Main.getInstance().getDescription().getAuthors().toArray())));
-        player.sendMessage(ChatUtils.color("&3Discord: &b&ohttps://discord.gg/yP7jQdvc6d"));
-        player.sendMessage(ChatUtils.color("&3Website: &d&ohttps://geik.xyz"));
-        player.sendMessage(ChatUtils.color("&7&m----------------------------------------"));
-        player.sendMessage(ChatUtils.color("&aAPI: &7" + Main.getIntegration().getClass().getSimpleName()));
-        player.sendMessage(ChatUtils.color("&aEconomy API: &7" + Main.getEconomy().getClass().getSimpleName()));
-        player.sendMessage(ChatUtils.color("&aActive Farmer: &7" + FarmerManager.getFarmers().size()));
-        ChatUtils.sendMessage(player, "&aLanguage: &7" + Main.getConfigFile().getSettings().getLang());
-        ChatUtils.sendMessage(player, "&aModules: &7" + Arrays.toString(ModuleManager.getModules().values().stream().map(module -> module.getName()).collect(Collectors.toList()).toArray()));
-        player.sendMessage(ChatUtils.color("&7&m----------------------------------------"));
+        sendLines(player, Main.getLangFile().getCommands().getAbout(),
+                new Placeholder("{version}", Main.getInstance().getDescription().getVersion()),
+                new Placeholder("{authors}", String.join(", ", Main.getInstance().getDescription().getAuthors())),
+                new Placeholder("{api}", Main.getIntegration().getClass().getSimpleName()),
+                new Placeholder("{economy}", Main.getEconomy().getClass().getSimpleName()),
+                new Placeholder("{farmer_count}", String.valueOf(FarmerManager.getFarmers().size())),
+                new Placeholder("{language}", Main.getConfigFile().getSettings().getLang()),
+                new Placeholder("{modules}", ModuleManager.getModules().values().stream()
+                        .map(module -> module.getName()).collect(Collectors.joining(", "))));
     }
 
     /**
@@ -165,18 +161,26 @@ public class FarmerCommand extends BaseCommand {
             ChatUtils.sendMessage(player, Main.getLangFile().getMessages().getNoFarmer());
         else {
             Farmer farmer = FarmerManager.getFarmers().get(regionID);
-            player.sendMessage(ChatUtils.color("&c----------------------"));
-            player.sendMessage(ChatUtils.color("&bRegion ID: &f" + regionID));
-            player.sendMessage(ChatUtils.color("&bID: &f" + farmer.getId()));
-            player.sendMessage(ChatUtils.color("&bOwner: &f" + Bukkit.getOfflinePlayer(farmer.getOwnerUUID()).getName()));
-            player.sendMessage(ChatUtils.color("&bLevel: &f" + FarmerLevel.getAllLevels().indexOf(farmer.getLevel())));
-            player.sendMessage(ChatUtils.color("&c----------------------"));
-            farmer.getUsers().stream().forEach(key -> player.sendMessage(ChatUtils.color("&b" +
-                    Bukkit.getOfflinePlayer(key.getUuid()).getName() + " &f- &3" + key.getPerm().name())));
-            player.sendMessage(ChatUtils.color("&c----------------------"));
-            farmer.getInv().getItems().stream().forEach(key -> player.sendMessage(ChatUtils.color("&6" + key.getMaterial().name() + " &e" + key.getAmount())));
-            player.sendMessage(ChatUtils.color("&c----------------------"));
-            farmer.getModuleAttributes().forEach((key, value) -> player.sendMessage(ChatUtils.color("&a" + key + " &f- &3" + value)));
+            String ownerName = Bukkit.getOfflinePlayer(farmer.getOwnerUUID()).getName();
+            sendLines(player, Main.getLangFile().getCommands().getInfoHeader(),
+                    new Placeholder("{region}", regionID),
+                    new Placeholder("{id}", String.valueOf(farmer.getId())),
+                    new Placeholder("{owner}", ownerName == null ? farmer.getOwnerUUID().toString() : ownerName),
+                    new Placeholder("{level}", String.valueOf(FarmerLevel.getAllLevels().indexOf(farmer.getLevel()))));
+            farmer.getUsers().forEach(user -> ChatUtils.sendMessage(player,
+                    Main.getLangFile().getCommands().getInfoUser(),
+                    new Placeholder("{player}", user.getName()),
+                    new Placeholder("{role}", user.getPerm().name())));
+            ChatUtils.sendMessage(player, Main.getLangFile().getCommands().getInfoSeparator());
+            farmer.getInv().getItems().forEach(item -> ChatUtils.sendMessage(player,
+                    Main.getLangFile().getCommands().getInfoItem(),
+                    new Placeholder("{material}", item.getMaterial().name()),
+                    new Placeholder("{amount}", String.valueOf(item.getAmount()))));
+            ChatUtils.sendMessage(player, Main.getLangFile().getCommands().getInfoSeparator());
+            farmer.getModuleAttributes().forEach((key, value) -> ChatUtils.sendMessage(player,
+                    Main.getLangFile().getCommands().getInfoModule(),
+                    new Placeholder("{key}", key),
+                    new Placeholder("{value}", String.valueOf(value))));
         }
     }
 
@@ -189,7 +193,7 @@ public class FarmerCommand extends BaseCommand {
     @SubCommand(value = "reload", alias = {"rl", "yenile"})
     public void reloadCommand(@NotNull CommandSender sender) {
         if (!RELOADING.compareAndSet(false, true)) {
-            sendReloadMessage(sender, "&eFarmer reload is already in progress.");
+            sendReloadMessage(sender, Main.getLangFile().getMessages().getReloadInProgress());
             return;
         }
 
@@ -201,6 +205,7 @@ public class FarmerCommand extends BaseCommand {
                     try {
                         Main.getConfigFile().load(true);
                         Main.getLangFile().load(true);
+                        BedrockMenus.initialize();
                         CacheLoader.loadAllItems();
                         CacheLoader.loadAllLevels();
                         Main.getInstance().getModuleManager().reloadModules();
@@ -209,15 +214,15 @@ public class FarmerCommand extends BaseCommand {
 
                         Main.getSql().loadAllFarmersAsync(
                                 () -> notifyReloadSuccess(sender, startedAt),
-                                () -> notifyReloadFailure(sender, "&cFarmer reload failed while loading database data."));
+                                () -> notifyReloadFailure(sender, Main.getLangFile().getMessages().getReloadDatabaseFailed()));
                     } catch (Exception exception) {
                         Main.getInstance().getLogger().severe("Farmer reload failed: " + exception.getMessage());
-                        notifyReloadFailure(sender, "&cFarmer reload failed. Check the server log.");
+                        notifyReloadFailure(sender, Main.getLangFile().getMessages().getReloadFailed());
                     }
                 });
             } catch (Exception exception) {
                 Main.getInstance().getLogger().severe("Farmer reload failed while saving data: " + exception.getMessage());
-                notifyReloadFailure(sender, "&cFarmer reload failed. Check the server log.");
+                notifyReloadFailure(sender, Main.getLangFile().getMessages().getReloadFailed());
             }
         });
     }
@@ -242,6 +247,11 @@ public class FarmerCommand extends BaseCommand {
         } else {
             Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(notification);
         }
+    }
+
+    private void sendLines(CommandSender sender, Iterable<String> lines, Placeholder... placeholders) {
+        for (String line : lines)
+            ChatUtils.sendMessage(sender, line, placeholders);
     }
 
     /**

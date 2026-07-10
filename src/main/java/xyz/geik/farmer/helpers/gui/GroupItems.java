@@ -5,6 +5,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import xyz.geik.farmer.Main;
+import xyz.geik.farmer.configuration.LangFile;
 import xyz.geik.farmer.helpers.ModuleHelper;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.model.inventory.FarmerItem;
@@ -48,6 +49,12 @@ public class GroupItems {
         ItemStack result = farmerItem.getMaterial().parseItem();
         assert result != null;
         ItemMeta meta = result.getItemMeta();
+        LangFile.Gui.FarmerGui.Items.GroupItems groupLang =
+                Main.getLangFile().getGui().getFarmerGui().getItems().getGroupItems();
+        String materialName = farmerItem.getMaterial().name();
+        String displayName = groupLang.getNames().getOrDefault(materialName, groupLang.getName())
+                .replace("{material}", materialName);
+        meta.setDisplayName(ChatUtils.color(displayName));
         // Stock amount of farmer
         long stock = farmerItem.getAmount();
         // Price of item
@@ -127,7 +134,9 @@ public class GroupItems {
             material = user.getUuid().toString();
         item = GuiHelper.getItem(name, lore, 0, material, false, Bukkit.getOfflinePlayer(user.getUuid()));
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatUtils.color("&b" + user.getName()));
+        meta.setDisplayName(ChatUtils.color(name
+                .replace("%player_name%", user.getName())
+                .replace("{player}", user.getName())));
         meta.setLore(meta.getLore().stream()
                 .map(key -> key.replace("{role}", ChatUtils.color(user.getPerm().getName()))).collect(Collectors.toList()));
         item.setItemMeta(meta);
