@@ -11,7 +11,9 @@ import xyz.geik.glib.shades.okaeri.configs.annotation.NameStrategy;
 import xyz.geik.glib.shades.okaeri.configs.annotation.Names;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * LangFile
@@ -76,6 +78,68 @@ public class en extends LangFile {
         private String notEnoughArguments = "{prefix} &cNot enough arguments!";
         private String tooManyArguments = "{prefix} &cToo many arguments!";
         private String noPerm = "{prefix} &cYou do not have permission to do this action!";
+        private String reloadInProgress = "{prefix} &eFarmer reload is already in progress.";
+        private String reloadDatabaseFailed = "{prefix} &cFarmer reload failed while loading database data.";
+        private String reloadFailed = "{prefix} &cFarmer reload failed. Check the server log.";
+        private String farmerDataUnavailable = "{prefix} &cFarmer data is no longer available.";
+        private String bedrockFormError = "{prefix} &cThe Bedrock menu could not be processed. Please try again.";
+        private String bedrockFormExpired = "{prefix} &eThis Bedrock menu expired. Open it again.";
+        private String bedrockFormCooldown = "{prefix} &ePlease wait before selecting another menu action.";
+    }
+
+    private Commands commands = new Commands();
+
+    @Getter
+    @Setter
+    public static class Commands extends LangFile.Commands {
+        private List<String> about = Arrays.asList(
+                "&7&m----------------------------------------",
+                "&3          FARMER &7- &6{version}",
+                "&3Authors: &c{authors}",
+                "&3Discord: &b&ohttps://discord.gg/yP7jQdvc6d",
+                "&3Website: &d&ohttps://geik.xyz",
+                "&7&m----------------------------------------",
+                "&aRegion API: &7{api}",
+                "&aEconomy API: &7{economy}",
+                "&aActive Farmers: &7{farmer_count}",
+                "&aLanguage: &7{language}",
+                "&aModules: &7{modules}",
+                "&7&m----------------------------------------"
+        );
+        private List<String> infoHeader = Arrays.asList(
+                "&c----------------------",
+                "&bRegion ID: &f{region}",
+                "&bID: &f{id}",
+                "&bOwner: &f{owner}",
+                "&bLevel: &f{level}",
+                "&c----------------------"
+        );
+        private String infoUser = "&b{player} &f- &3{role}";
+        private String infoItem = "&6{material} &e{amount}";
+        private String infoModule = "&a{key} &f- &3{value}";
+        private String infoSeparator = "&c----------------------";
+    }
+
+    private BedrockForms bedrockForms = new BedrockForms();
+
+    @Getter
+    @Setter
+    public static class BedrockForms extends LangFile.BedrockForms {
+        private String content = "Select an action.";
+        private String empty = "No actions are available in this menu.";
+        private String page = "Page {page}/{pages}";
+        private String previous = "Previous Page";
+        private String next = "Next Page";
+        private String back = "Back";
+        private String leftClick = "Withdraw One Stack";
+        private String rightClick = "Withdraw Maximum";
+        private String shiftRightClick = "Sell All";
+        private String changeRole = "Change User Role";
+        private String remove = "Remove User";
+        private String moduleLeftClick = "Primary Action";
+        private String moduleRightClick = "Secondary Action";
+        private String moduleShiftRightClick = "Alternate Action";
+        private String moduleDropClick = "Module Action";
     }
 
     private Various various = new Various();
@@ -301,6 +365,8 @@ public class en extends LangFile {
                 @Getter
                 @Setter
                 public static class GroupItems extends LangFile.Gui.FarmerGui.Items.GroupItems {
+                    private String name = "&e{material}";
+                    private Map<String, String> names = new LinkedHashMap<>();
                     private List<String> lore = Arrays.asList(
                             "",
                             " &8▪ &7Auto Sell: &f{module_autosellerpre_%item%}",

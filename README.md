@@ -13,7 +13,7 @@ Farmer is a Paper plugin that collects configured drops inside supported regions
 | Plain Bukkit / Spigot | Not supported; startup is rejected |
 | Geyser / Floodgate | Optional native Bedrock forms |
 
-Farmer v6-b115 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
+Farmer v6-b116 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
 
 ## Features
 
@@ -79,10 +79,26 @@ Notable sections include:
 
 Use `/farmer reload` after editing runtime configuration or language values.
 
+## Configuration Health
+
+Farmer validates `config.yml` and every built-in core language file before loading them at startup and during `/farmer reload`. The validator generates its canonical schema directly from the current configuration classes, so newly introduced entries are added automatically without a separately maintained migration list.
+
+When repair is required, Farmer first stores the original file under `plugins/Farmer/backups/config-repair/<timestamp>/`. It then performs an atomic replacement after applying these checks:
+
+- Missing entries are restored from current defaults.
+- Unknown or retired entries are removed.
+- Wrong YAML types, `null` values, required blank strings, oversized values, and invalid list entries are corrected.
+- Unsupported languages, invalid database settings, unsafe numeric ranges, and malformed GUI layouts are restored to safe defaults.
+- Malformed or oversized YAML files are backed up and regenerated rather than partially loaded.
+
+The newest 20 backup sets are retained to keep disk usage bounded. Symbolic links and paths outside Farmer's data directory are rejected. Core config and language objects are published together after a successful reload, so running region threads never observe a half-updated pair.
+
+Languages installed through `FarmerModule.setLang(...)` use the same backup-first repair lifecycle. Modules with custom YAML files can opt in through `FarmerConfigurationAPI.repairModuleFile(file, bundledDefaults)`.
+
 ## Installation
 
 1. Run Paper, Leaf, or Folia on a Minecraft version supported by this release.
-2. Place `Farmer-v6-b115.jar` in the server's `plugins` directory.
+2. Place `Farmer-v6-b116.jar` in the server's `plugins` directory.
 3. Install Vault and a supported economy provider when economy-backed features are enabled.
 4. Optionally install Geyser and/or Floodgate for native Bedrock forms.
 5. Install a supported region or island plugin and configure allowed worlds.
@@ -100,7 +116,7 @@ The project uses Maven:
 mvn clean package
 ```
 
-The shaded release artifact is written to `target/Farmer-v6-b115.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
+The shaded release artifact is written to `target/Farmer-v6-b116.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
 
 ## Contributing
 

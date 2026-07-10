@@ -201,10 +201,9 @@ public class FarmerCommand extends BaseCommand {
         Main.getMorePaperLib().scheduling().asyncScheduler().run(() -> {
             try {
                 Main.getSql().updateAllFarmers();
+                Main.getInstance().reloadConfigurationFiles();
                 Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
                     try {
-                        Main.getConfigFile().load(true);
-                        Main.getLangFile().load(true);
                         BedrockMenus.initialize();
                         CacheLoader.loadAllItems();
                         CacheLoader.loadAllLevels();

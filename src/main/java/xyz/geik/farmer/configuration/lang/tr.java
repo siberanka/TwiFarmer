@@ -11,7 +11,9 @@ import xyz.geik.glib.shades.okaeri.configs.annotation.NameStrategy;
 import xyz.geik.glib.shades.okaeri.configs.annotation.Names;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * LangFile
@@ -363,6 +365,8 @@ public class tr extends LangFile {
                 @Getter
                 @Setter
                 public static class GroupItems extends LangFile.Gui.FarmerGui.Items.GroupItems {
+                    private String name = "&e{material}";
+                    private Map<String, String> names = new LinkedHashMap<>();
                     private List<String> lore = Arrays.asList(
                             "",
                             " &8▪ &7Stok: &f{stock}&8/&c{maxstock}",

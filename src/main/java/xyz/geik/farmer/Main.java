@@ -11,6 +11,7 @@ import xyz.geik.farmer.api.FarmerAPI;
 import xyz.geik.farmer.api.managers.FarmerManager;
 import xyz.geik.farmer.commands.FarmerCommand;
 import xyz.geik.farmer.configuration.ConfigFile;
+import xyz.geik.farmer.configuration.ConfigurationRepair;
 import xyz.geik.farmer.configuration.LangFile;
 import xyz.geik.farmer.database.MySQL;
 import xyz.geik.farmer.database.SQL;
@@ -30,6 +31,7 @@ import xyz.geik.glib.economy.Economy;
 import xyz.geik.glib.economy.EconomyAPI;
 import xyz.geik.glib.module.ModuleManager;
 import xyz.geik.glib.shades.okaeri.configs.ConfigManager;
+import xyz.geik.glib.shades.okaeri.configs.OkaeriConfig;
 import xyz.geik.glib.shades.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import xyz.geik.glib.shades.triumphteam.cmd.bukkit.BukkitCommandManager;
 import xyz.geik.glib.shades.triumphteam.cmd.bukkit.message.BukkitMessageKey;
@@ -39,7 +41,9 @@ import xyz.geik.glib.simplixstorage.SimplixStorageAPI;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Main class of farmer
@@ -85,11 +89,9 @@ public class Main extends JavaPlugin {
     @Getter
     private static Config itemsFile, levelFile;
 
-    @Getter
-    private static LangFile langFile;
+    private static volatile ConfigurationSnapshot configurationSnapshot;
 
-    @Getter
-    private static ConfigFile configFile;
+    private ConfigurationRepair configurationRepair;
 
     /**
      * Main integration of plugin integrations#Integrations
@@ -192,27 +194,88 @@ public class Main extends JavaPlugin {
      */
     public void setupFiles() {
         try {
-            configFile = ConfigManager.create(ConfigFile.class, (it) -> {
-                it.withConfigurer(new YamlBukkitConfigurer());
-                it.withBindFile(new File(getDataFolder(), "config.yml"));
-                it.saveDefaults();
-                it.load(true);
-            });
-            String langName = configFile.getSettings().getLang();
-            Class langClass = Class.forName("xyz.geik.farmer.configuration.lang." + langName);
-            Class<LangFile> languageClass = langClass;
-            this.langFile = ConfigManager.create(languageClass, (it) -> {
-                it.withConfigurer(new YamlBukkitConfigurer());
-                it.withBindFile(new File(getDataFolder() + "/lang", langName + ".yml"));
-                it.saveDefaults();
-                it.load(true);
-            });
+            configurationRepair = new ConfigurationRepair(getDataFolder(), getLogger());
+            reloadConfigurationFiles();
             itemsFile = getSimplixStorageAPI().initConfig("items");
             levelFile = getSimplixStorageAPI().initConfig("levels");
             WorldHelper.loadAllowedWorlds();
         } catch (Exception exception) {
             getServer().getPluginManager().disablePlugin(this);
-            throw new RuntimeException("Error loading configuration file");
+            throw new RuntimeException("Error loading configuration file", exception);
+        }
+    }
+
+    /**
+     * Repairs and reloads config.yml and the selected language as one publication step.
+     */
+    public synchronized void reloadConfigurationFiles() {
+        if (configurationRepair == null)
+            configurationRepair = new ConfigurationRepair(getDataFolder(), getLogger());
+
+        File configTarget = new File(getDataFolder(), "config.yml");
+        configurationRepair.repair(ConfigFile.class, configTarget,
+                ConfigurationRepair.DocumentType.CONFIG);
+        ConfigFile loadedConfig = loadOkaeriConfig(ConfigFile.class, configTarget);
+
+        String langName = loadedConfig.getSettings().getLang();
+        try {
+            Set<String> languages = new LinkedHashSet<>(Arrays.asList("en", "tr", langName));
+            LangFile loadedLanguage = null;
+            for (String language : languages) {
+                Class<? extends LangFile> languageClass = Class
+                        .forName("xyz.geik.farmer.configuration.lang." + language)
+                        .asSubclass(LangFile.class);
+                File languageTarget = new File(new File(getDataFolder(), "lang"), language + ".yml");
+                configurationRepair.repair(languageClass, languageTarget,
+                        ConfigurationRepair.DocumentType.LANGUAGE);
+                if (language.equals(langName))
+                    loadedLanguage = loadOkaeriConfig(languageClass, languageTarget);
+            }
+            if (loadedLanguage == null)
+                throw new IllegalStateException("Selected language was not loaded: " + langName);
+
+            configurationSnapshot = new ConfigurationSnapshot(loadedConfig, loadedLanguage);
+        } catch (ClassNotFoundException exception) {
+            throw new IllegalStateException("Validated language class is unavailable: " + langName, exception);
+        }
+    }
+
+    private <T extends OkaeriConfig> T loadOkaeriConfig(Class<T> type, File target) {
+        return ConfigManager.create(type, config -> {
+            config.withConfigurer(new YamlBukkitConfigurer());
+            config.withBindFile(target);
+            config.saveDefaults();
+            config.load(true);
+        });
+    }
+
+    public static ConfigFile getConfigFile() {
+        ConfigurationSnapshot snapshot = configurationSnapshot;
+        if (snapshot == null)
+            throw new IllegalStateException("Configuration has not been loaded yet");
+        return snapshot.configFile;
+    }
+
+    public static LangFile getLangFile() {
+        ConfigurationSnapshot snapshot = configurationSnapshot;
+        if (snapshot == null)
+            throw new IllegalStateException("Language has not been loaded yet");
+        return snapshot.langFile;
+    }
+
+    public ConfigurationRepair getConfigurationRepair() {
+        if (configurationRepair == null)
+            throw new IllegalStateException("Configuration repair service has not been initialized");
+        return configurationRepair;
+    }
+
+    private static final class ConfigurationSnapshot {
+        private final ConfigFile configFile;
+        private final LangFile langFile;
+
+        private ConfigurationSnapshot(ConfigFile configFile, LangFile langFile) {
+            this.configFile = configFile;
+            this.langFile = langFile;
         }
     }
 

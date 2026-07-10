@@ -6,12 +6,18 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.geik.farmer.Main;
+import xyz.geik.farmer.api.FarmerConfigurationAPI;
 import xyz.geik.farmer.helpers.ModuleHelper;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.shades.storage.Config;
 import xyz.geik.glib.module.GModule;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,16 +54,55 @@ public abstract class FarmerModule extends GModule {
      * @param langName name of lang
      */
     public void setLang(String langName, Class<?> targetClass) {
-        langName += ".yml";
-        String filePath = "plugins/" + Main.getInstance().getDescription().getName() + "/modules/" + this.getName().toLowerCase() + "/lang";
-        lang =  new Config(langName, filePath, getFileFromResourceAsStream(langName, targetClass));
+        validateLanguageName(langName);
+        String fileName = langName + ".yml";
+        installLanguage(fileName, getFileFromResourceAsStream(fileName, targetClass));
     }
 
     public void setLang(String langName, JavaPlugin plugin) {
-        langName += ".yml";
-        String filePath = "plugins/" + Main.getInstance().getDescription().getName() + "/modules/" + this.getName().toLowerCase() + "/lang";
-        lang =  new Config(langName, filePath, plugin.getResource(langName));
+        validateLanguageName(langName);
+        String fileName = langName + ".yml";
+        installLanguage(fileName, plugin.getResource(fileName));
 
+    }
+
+    private void validateLanguageName(String langName) {
+        if (langName == null || !langName.matches("[A-Za-z][A-Za-z0-9_-]{0,31}"))
+            throw new IllegalArgumentException("Invalid module language name");
+    }
+
+    private void installLanguage(String fileName, InputStream defaults) {
+        if (defaults == null)
+            throw new IllegalArgumentException("Module language resource not found: " + fileName);
+
+        byte[] defaultBytes = readDefaults(defaults);
+        Path modulesDirectory = Main.getInstance().getDataFolder().toPath()
+                .toAbsolutePath().normalize().resolve("modules");
+        Path languageDirectory = modulesDirectory
+                .resolve(getName().toLowerCase(java.util.Locale.ROOT)).resolve("lang").normalize();
+        if (!languageDirectory.startsWith(modulesDirectory))
+            throw new IllegalArgumentException("Unsafe module name: " + getName());
+
+        File target = languageDirectory.resolve(fileName).toFile();
+        FarmerConfigurationAPI.repairModuleFile(target, new ByteArrayInputStream(defaultBytes));
+        lang = new Config(fileName, languageDirectory.toString(), new ByteArrayInputStream(defaultBytes));
+    }
+
+    private byte[] readDefaults(InputStream defaults) {
+        try (InputStream input = defaults; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int read;
+            int total = 0;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > 8 * 1024 * 1024)
+                    throw new IllegalArgumentException("Module language resource exceeds 8 MiB");
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not read module language defaults", exception);
+        }
     }
 
     /**
