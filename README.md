@@ -13,7 +13,7 @@ Farmer is a Paper plugin that collects configured drops inside supported regions
 | Plain Bukkit / Spigot | Not supported; startup is rejected |
 | Geyser / Floodgate | Optional native Bedrock forms |
 
-Farmer v6-b116 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
+Farmer v6-b117 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
 
 ## Features
 
@@ -79,6 +79,20 @@ Notable sections include:
 
 Use `/farmer reload` after editing runtime configuration or language values.
 
+## Update Checker
+
+Farmer checks only the fixed `siberanka/TwiFarmer` GitHub repository using asynchronous HTTPS at startup and every six hours by default. `update-checker.enable` defaults to `true`; connection/request timeouts, response size, `v6-bN` tags, and release URLs are bounded and validated. Reload or disable cancels or invalidates pending checks.
+
+When a newer release exists, the console and each operator or player with `farmer.admin` receive one localized message per release. The message contains the Farmer plugin name, installed/latest versions, and a validated direct JAR download link.
+
+```yaml
+update-checker:
+  enable: true
+  check-interval-hours: 6
+  connect-timeout-seconds: 5
+  request-timeout-seconds: 8
+```
+
 ## Configuration Health
 
 Farmer validates `config.yml` and every built-in core language file before loading them at startup and during `/farmer reload`. The validator generates its canonical schema directly from the current configuration classes, so newly introduced entries are added automatically without a separately maintained migration list.
@@ -98,7 +112,7 @@ Languages installed through `FarmerModule.setLang(...)` use the same backup-firs
 ## Installation
 
 1. Run Paper, Leaf, or Folia on a Minecraft version supported by this release.
-2. Place `Farmer-v6-b116.jar` in the server's `plugins` directory.
+2. Place `Farmer-v6-b117.jar` in the server's `plugins` directory.
 3. Install Vault and a supported economy provider when economy-backed features are enabled.
 4. Optionally install Geyser and/or Floodgate for native Bedrock forms.
 5. Install a supported region or island plugin and configure allowed worlds.
@@ -116,7 +130,7 @@ The project uses Maven:
 mvn clean package
 ```
 
-The shaded release artifact is written to `target/Farmer-v6-b116.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
+The shaded release artifact is written to `target/Farmer-v6-b117.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
 
 ## Contributing
 

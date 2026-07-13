@@ -22,6 +22,7 @@ import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.listeners.ListenerRegister;
 import xyz.geik.farmer.listeners.backend.ChatEvent;
 import xyz.geik.farmer.modules.FarmerModule;
+import xyz.geik.farmer.update.UpdateChecker;
 import xyz.geik.farmer.shades.storage.Config;
 import xyz.geik.glib.GLib;
 import xyz.geik.glib.chat.ChatUtils;
@@ -93,6 +94,8 @@ public class Main extends JavaPlugin {
 
     private ConfigurationRepair configurationRepair;
 
+    private UpdateChecker updateChecker;
+
     /**
      * Main integration of plugin integrations#Integrations
      */
@@ -148,6 +151,7 @@ public class Main extends JavaPlugin {
         registerEconomy();
         setupCommands();
         sendEnableMessage();
+        restartUpdateChecker();
         getSql().loadAllFarmers();
         new ListenerRegister();
         BedrockMenus.initialize();
@@ -166,6 +170,7 @@ public class Main extends JavaPlugin {
         if (!paperFamilyServer)
             return;
 
+        stopUpdateChecker();
         ChatEvent.clearPendingPlayers();
         BedrockMenus.shutdown();
         if (getSql() != null)
@@ -267,6 +272,19 @@ public class Main extends JavaPlugin {
         if (configurationRepair == null)
             throw new IllegalStateException("Configuration repair service has not been initialized");
         return configurationRepair;
+    }
+
+    public void restartUpdateChecker() {
+        stopUpdateChecker();
+        updateChecker = new UpdateChecker(this, getConfigFile().getUpdateChecker());
+        updateChecker.start();
+    }
+
+    private void stopUpdateChecker() {
+        if (updateChecker != null) {
+            updateChecker.stop();
+            updateChecker = null;
+        }
     }
 
     private static final class ConfigurationSnapshot {

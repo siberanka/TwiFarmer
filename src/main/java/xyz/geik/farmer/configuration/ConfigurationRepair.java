@@ -310,6 +310,9 @@ public final class ConfigurationRepair {
         repairNumber(current, schema, result, "bedrock-forms.click-cooldown-ms", 0D, 5000D);
         repairNumber(current, schema, result, "bedrock-forms.max-lore-lines", 0D, 10D);
         repairNumber(current, schema, result, "bedrock-forms.max-button-length", 32D, 512D);
+        repairNumber(current, schema, result, "update-checker.check-interval-hours", 1D, 168D);
+        repairNumber(current, schema, result, "update-checker.connect-timeout-seconds", 2D, 30D);
+        repairNumber(current, schema, result, "update-checker.request-timeout-seconds", 3D, 60D);
         repairDatabase(current, schema, result);
         repairStringList(current, schema, result, "settings.allowed-worlds", false);
         repairStringList(current, schema, result, "production.items", true);
@@ -325,6 +328,16 @@ public final class ConfigurationRepair {
                                                 RepairResult result) {
         repairRequiredList(current, schema, result, "commands.about");
         repairRequiredList(current, schema, result, "commands.info-header");
+        repairUpdateMessage(current, schema, result);
+    }
+
+    private static void repairUpdateMessage(YamlConfiguration current, YamlConfiguration schema,
+                                            RepairResult result) {
+        String path = "messages.update-available";
+        String value = current.getString(path, "");
+        if (value.length() > 1024 || !value.contains("{plugin}") || !value.contains("{current}")
+                || !value.contains("{latest}") || !value.contains("{url}"))
+            replaceWithSchema(current, schema, result, path, "invalid update message placeholders");
     }
 
     private static void repairLanguageName(YamlConfiguration current, YamlConfiguration schema,

@@ -147,6 +147,25 @@ public class ConfigFile extends OkaeriConfig {
     @Comment("Bedrock form settings for Geyser and Floodgate players")
     private BedrockForms bedrockForms = new BedrockForms();
 
+    @Comment("Asynchronously checks the fixed TwiFarmer GitHub repository for stable releases")
+    private UpdateChecker updateChecker = new UpdateChecker();
+
+    @Getter
+    @Setter
+    public static class UpdateChecker extends OkaeriConfig {
+        @Comment("Enable GitHub update checks")
+        private boolean enable = true;
+
+        @Comment("Hours between checks (1-168)")
+        private int checkIntervalHours = 6;
+
+        @Comment("Connection timeout in seconds (2-30)")
+        private int connectTimeoutSeconds = 5;
+
+        @Comment("Request timeout in seconds (3-60)")
+        private int requestTimeoutSeconds = 8;
+    }
+
     @Getter
     @Setter
     public static class BedrockForms extends OkaeriConfig {

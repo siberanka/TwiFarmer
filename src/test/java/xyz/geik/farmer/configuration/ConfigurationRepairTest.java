@@ -37,6 +37,7 @@ class ConfigurationRepairTest {
                         + "  session-timeout-ms: 10\n"
                         + "  click-cooldown-ms: -1\n"
                         + "  max-lore-lines: 50\n"
+                        + "update-checker:\n  enable: invalid\n  check-interval-hours: 0\n"
                         + "database:\n  database-type: oracle\n  port: invalid\n"
                         + "gui:\n"
                         + "  farmer-layout: [bad]\n"
@@ -58,6 +59,8 @@ class ConfigurationRepairTest {
         assertFalse(current.contains("settings.obsolete"));
         assertEquals(20, current.getInt("bedrock-forms.page-size"));
         assertEquals(180, current.getInt("bedrock-forms.max-button-length"));
+        assertTrue(current.getBoolean("update-checker.enable"));
+        assertEquals(6, current.getInt("update-checker.check-interval-hours"));
         assertEquals("SQLite", current.getString("database.database-type"));
         assertEquals(schema.getStringList("gui.farmer-layout"),
                 current.getStringList("gui.farmer-layout"));
@@ -67,6 +70,7 @@ class ConfigurationRepairTest {
     void preservesValidDynamicNamesAndRepairsLanguageEntries() throws Exception {
         YamlConfiguration schema = yaml(
                 "messages:\n  prefix: '&3Farmer'\n"
+                        + "  update-available: '{prefix} [{plugin}] {current} {latest} {url}'\n"
                         + "commands:\n"
                         + "  about: ['about']\n"
                         + "  info-header: ['info']\n"
@@ -77,7 +81,7 @@ class ConfigurationRepairTest {
                         + "        name: '&e{material}'\n"
                         + "        names: {}\n");
         YamlConfiguration current = yaml(
-                "messages:\n  prefix: '   '\n  legacy: old\n"
+                "messages:\n  prefix: '   '\n  update-available: '&eUpdate'\n  legacy: old\n"
                         + "commands:\n  about: []\n  info-header: invalid\n"
                         + "gui:\n"
                         + "  farmer-gui:\n"
@@ -96,6 +100,8 @@ class ConfigurationRepairTest {
 
         assertTrue(result.changed());
         assertEquals("&3Farmer", current.getString("messages.prefix"));
+        assertTrue(current.getString("messages.update-available").contains("{plugin}"));
+        assertTrue(current.getString("messages.update-available").contains("{url}"));
         assertFalse(current.contains("messages.legacy"));
         assertEquals(Arrays.asList("about"), current.getStringList("commands.about"));
         assertEquals("&eBugday", current.getString(
@@ -138,6 +144,8 @@ class ConfigurationRepairTest {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.load(target.toFile());
         assertTrue(configuration.contains("bedrock-forms.max-button-length"));
+        assertTrue(configuration.getBoolean("update-checker.enable"));
+        assertEquals(6, configuration.getInt("update-checker.check-interval-hours"));
         assertTrue(configuration.contains("gui.farmer-layout"));
         configuration.set("settings.farmer-price", -1);
         configuration.set("bedrock-forms.max-button-length", null);
@@ -200,10 +208,12 @@ class ConfigurationRepairTest {
         assertFalse(en.getStringList("commands.about").isEmpty());
         assertNotNull(en.getString("bedrock-forms.change-role"));
         assertNotNull(en.getString("messages.bedrock-form-error"));
+        assertNotNull(en.getString("messages.update-available"));
         assertNotNull(en.getString("gui.farmer-gui.items.group-items.name"));
         assertFalse(tr.getStringList("commands.about").isEmpty());
         assertNotNull(tr.getString("bedrock-forms.change-role"));
         assertNotNull(tr.getString("messages.bedrock-form-error"));
+        assertNotNull(tr.getString("messages.update-available"));
         assertNotNull(tr.getString("gui.farmer-gui.items.group-items.name"));
 
         ConfigurationRepair.RepairResult secondPass = repair.repair(
@@ -232,6 +242,11 @@ class ConfigurationRepairTest {
                 + "  click-cooldown-ms: 250\n"
                 + "  max-lore-lines: 4\n"
                 + "  max-button-length: 180\n"
+                + "update-checker:\n"
+                + "  enable: true\n"
+                + "  check-interval-hours: 6\n"
+                + "  connect-timeout-seconds: 5\n"
+                + "  request-timeout-seconds: 8\n"
                 + "database:\n  database-type: SQLite\n  port: '3306'\n"
                 + "gui:\n"
                 + "  farmer-layout: ['    m    ']\n"

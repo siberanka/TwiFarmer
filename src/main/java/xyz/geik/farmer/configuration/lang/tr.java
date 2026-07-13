@@ -85,6 +85,8 @@ public class tr extends LangFile {
         private String bedrockFormError = "{prefix} &cBedrock menüsü işlenemedi. Lütfen tekrar dene.";
         private String bedrockFormExpired = "{prefix} &eBu Bedrock menüsünün süresi doldu. Menüyü yeniden aç.";
         private String bedrockFormCooldown = "{prefix} &eBaşka bir menü işlemi seçmeden önce biraz bekle.";
+        @Comment("yer tutucular: {plugin}, {current}, {latest}, {url}")
+        private String updateAvailable = "{prefix} &e[{plugin}] Güncelleme mevcut: &f{current} &7-> &a{latest}&7. İndir: &b{url}";
     }
 
     private Commands commands = new Commands();

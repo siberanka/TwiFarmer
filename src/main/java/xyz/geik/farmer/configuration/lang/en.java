@@ -85,6 +85,8 @@ public class en extends LangFile {
         private String bedrockFormError = "{prefix} &cThe Bedrock menu could not be processed. Please try again.";
         private String bedrockFormExpired = "{prefix} &eThis Bedrock menu expired. Open it again.";
         private String bedrockFormCooldown = "{prefix} &ePlease wait before selecting another menu action.";
+        @Comment("placeholders: {plugin}, {current}, {latest}, {url}")
+        private String updateAvailable = "{prefix} &e[{plugin}] Update available: &f{current} &7-> &a{latest}&7. Download: &b{url}";
     }
 
     private Commands commands = new Commands();
