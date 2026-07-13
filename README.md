@@ -25,6 +25,16 @@ Farmer v6-b117 is compiled against Paper API `26.1.2.build.74-stable` while reta
 - Native Bedrock forms without changing the Java inventory experience.
 - Public APIs and Bukkit events for modules and integrations.
 
+## Official Modules
+
+| Module | Description |
+| --- | --- |
+| [AutoHarvest](https://github.com/siberanka/TwiFarmer-AutoHarvest) | Harvests mature crops inside managed Farmer areas, replants supported crops, and transfers produce into Farmer storage. |
+| [AutoSell](https://github.com/siberanka/TwiFarmer-AutoSell) | Automatically sells eligible stocked items when Farmer capacity rules are reached and deposits the earnings through the configured economy. |
+| [SpawnerKiller](https://github.com/siberanka/TwiFarmer-SpawnerKiller) | Processes mobs created by active spawners, applies configurable entity filters, and transfers validated drops through the Farmer workflow. |
+
+Download each module from its repository's Releases page and place its JAR in `plugins/Farmer/modules/`. Review the module README for its Farmer version requirement, optional integrations, and configuration before enabling it.
+
 ## Bedrock Forms
 
 When Floodgate or Geyser is installed, connected Bedrock players automatically receive native Cumulus forms. Java players continue to receive the existing inventory menus.
