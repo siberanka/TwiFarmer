@@ -6,7 +6,7 @@
 
     <groupId>xyz.geik.farmer</groupId>
     <artifactId>Farmer</artifactId>
-    <version>v6-b118</version>
+    <version>v6-b119</version>
 
     <properties>
         <shaded.package>org.cas.osd.platform.ciam.shaded</shaded.package>
@@ -15,6 +15,7 @@
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gson.version>2.11.0</gson.version>
+        <xseries.version>v13.7.1</xseries.version>
     </properties>
 
     <!-- Dependencies -->
@@ -113,6 +114,12 @@
             <groupId>com.github.Geik-xyz</groupId>
             <artifactId>GLib</artifactId>
             <version>8108c11f23</version>
+        </dependency>
+        <!-- Replaces GLib's embedded XSeries 13.6.0, which cannot parse Minecraft 26.x versions. -->
+        <dependency>
+            <groupId>com.github.cryptomorin</groupId>
+            <artifactId>XSeries</artifactId>
+            <version>${xseries.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -260,6 +267,11 @@
                     <createDependencyReducedPom>false</createDependencyReducedPom>
                     <minimizeJar>false</minimizeJar>
                     <relocations>
+                        <!-- Keep the historical GLib namespace binary-compatible for Farmer modules. -->
+                        <relocation>
+                            <pattern>com.cryptomorin.xseries</pattern>
+                            <shadedPattern>xyz.geik.glib.shades.xseries</shadedPattern>
+                        </relocation>
                         <relocation>
                             <pattern>org.jetbrains.annotations</pattern>
                             <shadedPattern>xyz.geik.farmer.shades.jetbrains</shadedPattern>
@@ -269,6 +281,14 @@
                             <shadedPattern>xyz.geik.farmer.shades.morepaperlib</shadedPattern>
                         </relocation>
                     </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>com.github.Geik-xyz:GLib</artifact>
+                            <excludes>
+                                <exclude>xyz/geik/glib/shades/xseries/**</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
                 <executions>
                     <execution>

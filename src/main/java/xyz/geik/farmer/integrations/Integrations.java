@@ -64,28 +64,26 @@ public abstract class Integrations {
      * and loads integration class of it.
      */
     public static void registerIntegrations() {
-        Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
-            if (Bukkit.getPluginManager().isPluginEnabled("SuperiorSkyblock2"))
-                Main.setIntegration(new SuperiorSkyblock());
-            else if (Bukkit.getPluginManager().isPluginEnabled("GriefPrevention"))
-                Main.setIntegration(new GriefPrevent());
-            else if (Bukkit.getPluginManager().isPluginEnabled("BentoBox"))
-                Main.setIntegration(new Bento());
-            else if (Bukkit.getPluginManager().isPluginEnabled("ASkyBlock"))
-                Main.setIntegration(new Askyblock());
-            else if (Bukkit.getPluginManager().isPluginEnabled("FabledSkyBlock"))
-                Main.setIntegration(new FabledSkyblock());
-            else if (Bukkit.getPluginManager().isPluginEnabled("Towny"))
-                Main.setIntegration(new TownyAdvanced());
-            else if (Bukkit.getPluginManager().isPluginEnabled("Lands"))
-                Main.setIntegration(new Lands());
-            else if (Bukkit.getPluginManager().isPluginEnabled("IridiumSkyblock"))
-                Main.setIntegration(new IridiumSkyblock());
-            else if (Bukkit.getPluginManager().isPluginEnabled("UltimateClaims"))
-                Main.setIntegration(new UltimateClaims());
-            else if (Bukkit.getPluginManager().isPluginEnabled("RClaim")) {
-                Main.setIntegration(new RClaim());
-            }
-        });
+        Main.setIntegration(null);
+        if (Bukkit.getPluginManager().isPluginEnabled("SuperiorSkyblock2"))
+            Main.setIntegration(new SuperiorSkyblock());
+        else if (Bukkit.getPluginManager().isPluginEnabled("GriefPrevention"))
+            Main.setIntegration(new GriefPrevent());
+        else if (Bukkit.getPluginManager().isPluginEnabled("BentoBox"))
+            Main.setIntegration(new Bento());
+        else if (Bukkit.getPluginManager().isPluginEnabled("ASkyBlock"))
+            Main.setIntegration(new Askyblock());
+        else if (Bukkit.getPluginManager().isPluginEnabled("FabledSkyBlock"))
+            Main.setIntegration(new FabledSkyblock());
+        else if (Bukkit.getPluginManager().isPluginEnabled("Towny"))
+            Main.setIntegration(new TownyAdvanced());
+        else if (Bukkit.getPluginManager().isPluginEnabled("Lands"))
+            Main.setIntegration(new Lands());
+        else if (Bukkit.getPluginManager().isPluginEnabled("IridiumSkyblock"))
+            Main.setIntegration(new IridiumSkyblock());
+        else if (Bukkit.getPluginManager().isPluginEnabled("UltimateClaims"))
+            Main.setIntegration(new UltimateClaims());
+        else if (Bukkit.getPluginManager().isPluginEnabled("RClaim"))
+            Main.setIntegration(new RClaim());
     }
 }

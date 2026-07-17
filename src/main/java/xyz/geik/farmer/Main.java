@@ -10,6 +10,7 @@ import space.arim.morepaperlib.MorePaperLib;
 import xyz.geik.farmer.api.FarmerAPI;
 import xyz.geik.farmer.api.managers.FarmerManager;
 import xyz.geik.farmer.commands.FarmerCommand;
+import xyz.geik.farmer.compatibility.RuntimeCompatibility;
 import xyz.geik.farmer.configuration.ConfigFile;
 import xyz.geik.farmer.configuration.ConfigurationRepair;
 import xyz.geik.farmer.configuration.LangFile;
@@ -114,6 +115,8 @@ public class Main extends JavaPlugin {
     private static BukkitCommandManager<CommandSender> commandManager;
 
     private boolean paperFamilyServer;
+    private boolean farmersLoaded;
+    private boolean enableCompleted;
 
     /**
      * Loading files before enable
@@ -144,24 +147,35 @@ public class Main extends JavaPlugin {
             return;
         }
 
-        morePaperLib = new MorePaperLib(this);
-        FarmerAPI.getFarmerManager();
-        Integrations.registerIntegrations();
-        new GLib(this, getLangFile().getMessages().getPrefix());
-        pricingManager = new PricingManager(this);
-        // API Installer
-        PlaceholderHelper.initialize();
-        CacheLoader.loadAllItems();
-        CacheLoader.loadAllLevels();
-        registerEconomy();
-        setupCommands();
-        sendEnableMessage();
-        restartUpdateChecker();
-        getSql().loadAllFarmers();
-        new ListenerRegister();
-        BedrockMenus.initialize();
-        loadMetrics();
-        registerModules();
+        if (!RuntimeCompatibility.verify(this)) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        try {
+            morePaperLib = new MorePaperLib(this);
+            FarmerAPI.getFarmerManager();
+            Integrations.registerIntegrations();
+            new GLib(this, getLangFile().getMessages().getPrefix());
+            pricingManager = new PricingManager(this);
+            PlaceholderHelper.initialize();
+            CacheLoader.loadAllItems();
+            CacheLoader.loadAllLevels();
+            registerEconomy();
+            setupCommands();
+            sendEnableMessage();
+            restartUpdateChecker();
+            getSql().loadAllFarmers();
+            farmersLoaded = true;
+            new ListenerRegister();
+            BedrockMenus.initialize();
+            loadMetrics();
+            registerModules();
+            enableCompleted = true;
+        } catch (RuntimeException | LinkageError failure) {
+            getLogger().severe("Farmer startup aborted: " + RuntimeCompatibility.summarize(failure));
+            getServer().getPluginManager().disablePlugin(this);
+        }
     }
 
     /**
@@ -175,16 +189,33 @@ public class Main extends JavaPlugin {
         if (!paperFamilyServer)
             return;
 
-        stopUpdateChecker();
-        ChatEvent.clearPendingPlayers();
-        BedrockMenus.shutdown();
-        if (getSql() != null)
-            getSql().updateAllFarmers();
+        if (!enableCompleted)
+            getLogger().warning("Cleaning up a partially initialized Farmer startup.");
+        safeShutdown("update checker", this::stopUpdateChecker);
+        safeShutdown("pending chat state", ChatEvent::clearPendingPlayers);
+        safeShutdown("Bedrock forms", BedrockMenus::shutdown);
+        if (farmersLoaded && getSql() != null)
+            safeShutdown("farmer data save", () -> getSql().updateAllFarmers());
         if (getCommandManager() != null)
-            CommandHelper.unregisterCommands();
+            safeShutdown("commands", CommandHelper::unregisterCommands);
         if (getModuleManager() != null)
-            ModuleHelper.getInstance().unloadModules();
+            safeShutdown("modules", () -> ModuleHelper.getInstance().unloadModules());
+        farmersLoaded = false;
+        enableCompleted = false;
         pricingManager = null;
+        commandManager = null;
+        economy = null;
+        integration = null;
+        morePaperLib = null;
+    }
+
+    private void safeShutdown(String component, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException | LinkageError failure) {
+            getLogger().warning("Could not cleanly stop " + component + ": "
+                    + RuntimeCompatibility.summarize(failure));
+        }
     }
 
     private boolean isPaperFamilyServer() {
@@ -352,8 +383,12 @@ public class Main extends JavaPlugin {
         Metrics metrics = new Metrics(Main.instance, 9646);
         metrics.addCustomChart(new Metrics.SingleLineChart("ciftci_sayisi", () -> FarmerManager.getFarmers().size()));
         metrics.addCustomChart(new Metrics.SimplePie("api_eklentisi", () -> {
-            String[] data = getIntegration().getClass().getName().split(".");
-            return data[data.length-1];
+            Integrations activeIntegration = getIntegration();
+            if (activeIntegration == null)
+                return "none";
+
+            String integrationName = activeIntegration.getClass().getSimpleName();
+            return integrationName.isEmpty() ? "unknown" : integrationName;
         }));
     }
 

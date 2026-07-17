@@ -13,7 +13,9 @@ Farmer is a Paper plugin that collects configured drops inside supported regions
 | Plain Bukkit / Spigot | Not supported; startup is rejected |
 | Geyser / Floodgate | Optional native Bedrock forms |
 
-Farmer v6-b118 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
+Farmer v6-b119 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
+
+The runtime bundles XSeries `v13.7.1` under Farmer's historical GLib namespace. This preserves module binary compatibility while supporting Minecraft's 26.x version format and updated material, sound, profile, reflection, and inventory APIs. Startup preflights these compatibility surfaces before commands, listeners, modules, or cached stock are published. An incompatible external module is isolated and skipped with bounded diagnostics instead of disabling Farmer.
 
 ## Features
 
@@ -160,7 +162,7 @@ Languages installed through `FarmerModule.setLang(...)` use the same backup-firs
 ## Installation
 
 1. Run Paper, Leaf, or Folia on a Minecraft version supported by this release.
-2. Place `Farmer-v6-b118.jar` in the server's `plugins` directory.
+2. Place `Farmer-v6-b119.jar` in the server's `plugins` directory.
 3. Install Vault and a supported economy provider when economy-backed features are enabled.
 4. Optionally install Geyser and/or Floodgate for native Bedrock forms.
 5. Install a supported region or island plugin and configure allowed worlds.
@@ -178,7 +180,7 @@ The project uses Maven:
 mvn clean package
 ```
 
-The shaded release artifact is written to `target/Farmer-v6-b118.jar`. Geyser, Floodgate, and optional market APIs are not bundled and must remain supplied by the server when their integrations are enabled.
+The shaded release artifact is written to `target/Farmer-v6-b119.jar`. Geyser, Floodgate, and optional market APIs are not bundled and must remain supplied by the server when their integrations are enabled.
 
 ## Contributing
 

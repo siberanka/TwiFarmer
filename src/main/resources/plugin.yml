@@ -1,7 +1,7 @@
 name: Farmer
 author: Geik, WaterArchery, adabugra, Amowny, Dsngxddd, siberanka
 main: xyz.geik.farmer.Main
-version: v6-b118
+version: v6-b119
 api-version: "1.21"
 softdepend: [PlaceholderAPI, Vault, RoyaleEconomy, PlayerPoints, GrinGotts, ElementalGems, ASkyBlock, BentoBox, SuperiorSkyblock2, GriefPrevention, FabledSkyBlock, Lands, IridiumSkyblock, UltimateClaims, floodgate, Geyser-Spigot, UltimateShop, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, ExcellentShop, zShop, GUIShop, Essentials, CMI]
 loadbefore: [AutoPickup]

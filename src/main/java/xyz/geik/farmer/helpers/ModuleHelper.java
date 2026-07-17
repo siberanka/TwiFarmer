@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.Nullable;
 import xyz.geik.farmer.Main;
+import xyz.geik.farmer.compatibility.RuntimeCompatibility;
 import xyz.geik.farmer.modules.FarmerModule;
 import xyz.geik.farmer.modules.production.Production;
 import xyz.geik.glib.GLib;
@@ -14,7 +15,6 @@ import xyz.geik.glib.chat.ChatUtils;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -27,8 +27,13 @@ import java.util.zip.ZipInputStream;
 @Getter
 public class ModuleHelper {
 
+    private static final int MAX_MODULE_JARS = 128;
+    private static final int MAX_CLASS_ENTRIES = 20000;
+    private static final int MAX_FAILURE_LOGS = 20;
+
     private static ModuleHelper instance;
     private final List<FarmerModule> modules = new ArrayList<>();
+    private final Set<URLClassLoader> externalClassLoaders = new HashSet<>();
 
     /**
      * @return the singleton instance of ModuleHelper
@@ -56,38 +61,69 @@ public class ModuleHelper {
             }
             catch (Exception e) {}
             if (files != null) {
-                for (File file : files) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
+                int moduleJarCount = Math.min(files.length, MAX_MODULE_JARS);
+                if (files.length > MAX_MODULE_JARS)
+                    Main.getInstance().getLogger().warning("Only the first " + MAX_MODULE_JARS
+                            + " module jars will be scanned; found " + files.length + '.');
+                int loggedFailures = 0;
+                for (int fileIndex = 0; fileIndex < moduleJarCount; fileIndex++) {
+                    File file = files[fileIndex];
                     if (!file.getName().endsWith(".jar")) continue;
 
-                    FileInputStream fileInputStream = new FileInputStream(file.getAbsoluteFile());
-                    ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
-                    ClassLoader loader = ClassHelper.class.getClassLoader();
-                    URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{file.toURI().toURL()}, loader);
-
-                    for (ZipEntry zipEntry = zipInputStream.getNextEntry(); zipEntry != null; zipEntry = zipInputStream.getNextEntry()) {
-                        try {
+                    ClassLoader parentLoader = ClassHelper.class.getClassLoader();
+                    URLClassLoader moduleLoader = null;
+                    boolean retainModuleLoader = false;
+                    try (FileInputStream fileInputStream = new FileInputStream(file.getAbsoluteFile());
+                         ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
+                        moduleLoader = new URLClassLoader(new URL[]{file.toURI().toURL()}, parentLoader);
+                        int classEntries = 0;
+                        for (ZipEntry zipEntry = zipInputStream.getNextEntry(); zipEntry != null;
+                             zipEntry = zipInputStream.getNextEntry()) {
+                            if (++classEntries > MAX_CLASS_ENTRIES) {
+                                Main.getInstance().getLogger().warning("Skipped oversized module jar " + file.getName());
+                                break;
+                            }
                             if (!zipEntry.isDirectory() && zipEntry.getName().endsWith(".class")) {
-                                String className = zipEntry.getName().replaceAll("/", ".").replaceAll(".class", "");
-                                Class<?> loadedClass = urlClassLoader.loadClass(className);
+                                String entryName = zipEntry.getName();
+                                String className = entryName.substring(0, entryName.length() - ".class".length())
+                                        .replace('/', '.');
 
-                                if (loadedClass.getSuperclass().getName().endsWith("FarmerModule")) {
+                                try {
+                                    Class<?> loadedClass = moduleLoader.loadClass(className);
+                                    Class<?> superClass = loadedClass.getSuperclass();
+                                    if (superClass == null || !superClass.getName().endsWith("FarmerModule"))
+                                        continue;
                                     FarmerModule module = (FarmerModule) loadedClass.getDeclaredConstructor().newInstance();
                                     loadModule(module);
+                                    retainModuleLoader = true;
+                                } catch (Exception | LinkageError failure) {
+                                    if (loggedFailures++ < MAX_FAILURE_LOGS)
+                                        Main.getInstance().getLogger().warning("Skipped incompatible module class "
+                                                + className + " from " + file.getName() + ": "
+                                                + RuntimeCompatibility.summarize(failure));
                                 }
                             }
                         }
-                        catch (Exception e1) {
-                            continue;
+                    } catch (Exception | LinkageError failure) {
+                        Main.getInstance().getLogger().warning("Could not scan module " + file.getName() + ": "
+                                + RuntimeCompatibility.summarize(failure));
+                    } finally {
+                        if (moduleLoader != null) {
+                            if (retainModuleLoader)
+                                externalClassLoaders.add(moduleLoader);
+                            else
+                                closeModuleLoader(moduleLoader, file.getName());
                         }
                     }
-
-                    urlClassLoader.close();
-                    fileInputStream.close();
-                    zipInputStream.close();
                 }
+                if (loggedFailures > MAX_FAILURE_LOGS)
+                    Main.getInstance().getLogger().warning("Suppressed " + (loggedFailures - MAX_FAILURE_LOGS)
+                            + " additional incompatible module class errors.");
             }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } catch (Exception | LinkageError failure) {
+            Main.getInstance().getLogger().warning("External Farmer modules could not be scanned: "
+                    + RuntimeCompatibility.summarize(failure));
         }
     }
 
@@ -107,10 +143,26 @@ public class ModuleHelper {
      * @param module the module to load
      */
     public void loadModule(FarmerModule module) {
-        Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> Bukkit.getPluginManager().callEvent(new ModuleEnableEvent(module)));
         module.setEnabled(true);
-        module.onEnable();
-        modules.add(module);
+        boolean initialized = false;
+        try {
+            module.onEnable();
+            initialized = true;
+            modules.add(module);
+            Main.getMorePaperLib().scheduling().globalRegionalScheduler().run(
+                    () -> Bukkit.getPluginManager().callEvent(new ModuleEnableEvent(module)));
+        } catch (RuntimeException | LinkageError failure) {
+            modules.remove(module);
+            module.setEnabled(false);
+            if (initialized) {
+                try {
+                    module.onDisable();
+                } catch (RuntimeException | LinkageError rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
     }
 
     /**
@@ -118,14 +170,33 @@ public class ModuleHelper {
      */
     public void unloadModules() {
         for (FarmerModule module : new ArrayList<>(modules)) {
-            if (module.isEnabled()) {
+            try {
+                if (!module.isEnabled())
+                    continue;
                 module.setEnabled(false);
                 Bukkit.getPluginManager().callEvent(new ModuleDisableEvent(module));
                 module.onDisable();
                 String message = "&3[" + GLib.getInstance().getName() + "] &c" + module.getName() + " disabled.";
                 ChatUtils.sendMessage(Bukkit.getConsoleSender(), message);
+            } catch (RuntimeException | LinkageError failure) {
+                Main.getInstance().getLogger().warning("Could not cleanly disable module " + module.getName() + ": "
+                        + RuntimeCompatibility.summarize(failure));
+            } finally {
+                module.setEnabled(false);
                 modules.remove(module);
             }
+        }
+        for (URLClassLoader classLoader : new ArrayList<>(externalClassLoaders))
+            closeModuleLoader(classLoader, "external module");
+        externalClassLoaders.clear();
+    }
+
+    private void closeModuleLoader(URLClassLoader classLoader, String source) {
+        try {
+            classLoader.close();
+        } catch (IOException failure) {
+            Main.getInstance().getLogger().warning("Could not close " + source + " class loader: "
+                    + RuntimeCompatibility.summarize(failure));
         }
     }
 
