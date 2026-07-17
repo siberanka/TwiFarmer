@@ -1,6 +1,7 @@
 package xyz.geik.farmer.helpers.gui;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +44,8 @@ public class GroupItems {
      * @param farmerItem item of farmer
      * @return ItemStack of farmer held
      */
-    public static @NotNull ItemStack getGroupItem(@NotNull Farmer farmer, @NotNull FarmerItem farmerItem) {
+    public static @NotNull ItemStack getGroupItem(@NotNull Farmer farmer, @NotNull FarmerItem farmerItem,
+                                                   @NotNull OfflinePlayer viewer) {
         long capacity = farmer.getLevel().getCapacity();
         double tax = farmer.getLevel().getTax();
         ItemStack result = farmerItem.getMaterial().parseItem();
@@ -58,7 +60,7 @@ public class GroupItems {
         // Stock amount of farmer
         long stock = farmerItem.getAmount();
         // Price of item
-        double price = farmerItem.getPrice();
+        double price = Main.getPricingManager().getUnitSellPrice(viewer, farmerItem).orElse(-1D);
         // Calculates percent of stocked item
         int percent = (int) (100*stock/capacity);
         // Select color of stock capacity

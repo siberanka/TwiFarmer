@@ -1,3 +1,4 @@
+# Manual prices are used only when pricing.source is manual, or auto finds no market plugin.
 Items:
   CACTUS:
     price: 0.1

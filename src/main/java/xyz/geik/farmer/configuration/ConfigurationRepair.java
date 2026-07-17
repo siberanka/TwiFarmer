@@ -313,9 +313,11 @@ public final class ConfigurationRepair {
         repairNumber(current, schema, result, "update-checker.check-interval-hours", 1D, 168D);
         repairNumber(current, schema, result, "update-checker.connect-timeout-seconds", 2D, 30D);
         repairNumber(current, schema, result, "update-checker.request-timeout-seconds", 3D, 60D);
+        repairPricing(current, schema, result);
         repairDatabase(current, schema, result);
         repairStringList(current, schema, result, "settings.allowed-worlds", false);
         repairStringList(current, schema, result, "production.items", true);
+        repairStringList(current, schema, result, "pricing.auto-priority", false);
         repairLayout(current, schema, result, "gui.farmer-layout");
         repairLayout(current, schema, result, "gui.manage-layout");
         repairLayout(current, schema, result, "gui.buy-farmer-layout");
@@ -385,6 +387,42 @@ public final class ConfigurationRepair {
                 throw new NumberFormatException("out of range");
         } catch (NumberFormatException exception) {
             replaceWithSchema(current, schema, result, "database.port", "invalid database port");
+        }
+    }
+
+    private static void repairPricing(YamlConfiguration current, YamlConfiguration schema,
+                                      RepairResult result) {
+        String source = current.getString("pricing.source", "").trim().toLowerCase(Locale.ROOT);
+        if (source.equals("economyshopgui-premium"))
+            source = "economyshopgui";
+        else if (source.equals("essentialsx"))
+            source = "essentials";
+        if (!source.matches("[a-z0-9][a-z0-9_-]{0,31}")) {
+            replaceWithSchema(current, schema, result, "pricing.source", "invalid pricing provider id");
+        } else if (!source.equals(current.getString("pricing.source"))) {
+            current.set("pricing.source", source);
+            result.corrected++;
+            result.detail("normalized pricing.source");
+        }
+
+        List<?> values = current.getList("pricing.auto-priority");
+        if (values == null)
+            return;
+        List<String> cleaned = values.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .map(value -> value.equals("economyshopgui-premium") ? "economyshopgui" : value)
+                .map(value -> value.equals("essentialsx") ? "essentials" : value)
+                .filter(value -> value.matches("[a-z0-9][a-z0-9_-]{0,31}"))
+                .distinct()
+                .collect(Collectors.toList());
+        if (cleaned.isEmpty()) {
+            replaceWithSchema(current, schema, result, "pricing.auto-priority", "empty pricing priority");
+        } else if (!cleaned.equals(values)) {
+            current.set("pricing.auto-priority", cleaned);
+            result.corrected++;
+            result.detail("cleaned pricing.auto-priority");
         }
     }
 

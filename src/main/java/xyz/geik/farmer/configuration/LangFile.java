@@ -44,6 +44,9 @@ public class LangFile extends OkaeriConfig {
 
         @Comment("placeholders: {money} money which deposited to player {tax} tax amount.")
         private String sellComplate = "{prefix} &aItems sold. &6Profit: &e{money}&f, &6Tax: &e{tax}";
+        @Comment("placeholder: {source} active pricing provider")
+        private String sellPriceUnavailable = "{prefix} &cThis item has no valid sell price from {source}.";
+        private String sellPaymentFailed = "{prefix} &cThe sale could not be completed. Your stock was restored.";
         private String wrongWorld = "{prefix} &cYou cannot do this in this world.";
         private String noRegion = "{prefix} &cThere is no region for bound a farmer.";
         private String removedFarmer = "{prefix} &aRemoved farmer successfully.";

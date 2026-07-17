@@ -32,6 +32,9 @@ class ConfigurationRepairTest {
                         + "  obsolete: true\n"
                         + "production:\n  re-calculate: 0\n  items: []\n"
                         + "tax:\n  rate: 150\n"
+                        + "pricing:\n"
+                        + "  source: EconomyShopGUI-Premium\n"
+                        + "  auto-priority: [UltimateShop, '', ultimateshop, EssentialsX, 3]\n"
                         + "bedrock-forms:\n"
                         + "  page-size: 100\n"
                         + "  session-timeout-ms: 10\n"
@@ -59,6 +62,9 @@ class ConfigurationRepairTest {
         assertFalse(current.contains("settings.obsolete"));
         assertEquals(20, current.getInt("bedrock-forms.page-size"));
         assertEquals(180, current.getInt("bedrock-forms.max-button-length"));
+        assertEquals("economyshopgui", current.getString("pricing.source"));
+        assertEquals(Arrays.asList("ultimateshop", "essentials"),
+                current.getStringList("pricing.auto-priority"));
         assertTrue(current.getBoolean("update-checker.enable"));
         assertEquals(6, current.getInt("update-checker.check-interval-hours"));
         assertEquals("SQLite", current.getString("database.database-type"));
@@ -144,6 +150,8 @@ class ConfigurationRepairTest {
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.load(target.toFile());
         assertTrue(configuration.contains("bedrock-forms.max-button-length"));
+        assertEquals("auto", configuration.getString("pricing.source"));
+        assertTrue(configuration.getStringList("pricing.auto-priority").contains("ultimateshop"));
         assertTrue(configuration.getBoolean("update-checker.enable"));
         assertEquals(6, configuration.getInt("update-checker.check-interval-hours"));
         assertTrue(configuration.contains("gui.farmer-layout"));
@@ -209,11 +217,15 @@ class ConfigurationRepairTest {
         assertNotNull(en.getString("bedrock-forms.change-role"));
         assertNotNull(en.getString("messages.bedrock-form-error"));
         assertNotNull(en.getString("messages.update-available"));
+        assertNotNull(en.getString("messages.sell-price-unavailable"));
+        assertNotNull(en.getString("messages.sell-payment-failed"));
         assertNotNull(en.getString("gui.farmer-gui.items.group-items.name"));
         assertFalse(tr.getStringList("commands.about").isEmpty());
         assertNotNull(tr.getString("bedrock-forms.change-role"));
         assertNotNull(tr.getString("messages.bedrock-form-error"));
         assertNotNull(tr.getString("messages.update-available"));
+        assertNotNull(tr.getString("messages.sell-price-unavailable"));
+        assertNotNull(tr.getString("messages.sell-payment-failed"));
         assertNotNull(tr.getString("gui.farmer-gui.items.group-items.name"));
 
         ConfigurationRepair.RepairResult secondPass = repair.repair(
@@ -236,6 +248,9 @@ class ConfigurationRepairTest {
                 + "  allowed-worlds: [world]\n"
                 + "production:\n  re-calculate: 15\n  items: []\n"
                 + "tax:\n  rate: 20.0\n"
+                + "pricing:\n"
+                + "  source: auto\n"
+                + "  auto-priority: [ultimateshop, economyshopgui]\n"
                 + "bedrock-forms:\n"
                 + "  page-size: 20\n"
                 + "  session-timeout-ms: 30000\n"

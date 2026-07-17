@@ -22,6 +22,7 @@ import xyz.geik.farmer.integrations.bedrock.BedrockMenus;
 import xyz.geik.farmer.listeners.ListenerRegister;
 import xyz.geik.farmer.listeners.backend.ChatEvent;
 import xyz.geik.farmer.modules.FarmerModule;
+import xyz.geik.farmer.pricing.PricingManager;
 import xyz.geik.farmer.update.UpdateChecker;
 import xyz.geik.farmer.shades.storage.Config;
 import xyz.geik.glib.GLib;
@@ -96,6 +97,9 @@ public class Main extends JavaPlugin {
 
     private UpdateChecker updateChecker;
 
+    @Getter
+    private static PricingManager pricingManager;
+
     /**
      * Main integration of plugin integrations#Integrations
      */
@@ -144,6 +148,7 @@ public class Main extends JavaPlugin {
         FarmerAPI.getFarmerManager();
         Integrations.registerIntegrations();
         new GLib(this, getLangFile().getMessages().getPrefix());
+        pricingManager = new PricingManager(this);
         // API Installer
         PlaceholderHelper.initialize();
         CacheLoader.loadAllItems();
@@ -179,6 +184,7 @@ public class Main extends JavaPlugin {
             CommandHelper.unregisterCommands();
         if (getModuleManager() != null)
             ModuleHelper.getInstance().unloadModules();
+        pricingManager = null;
     }
 
     private boolean isPaperFamilyServer() {

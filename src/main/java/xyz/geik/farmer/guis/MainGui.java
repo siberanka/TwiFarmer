@@ -86,7 +86,7 @@ public class MainGui {
         for (FarmerItem item : farmer.getInv().getItems()) {
             // Element of group there can x amount of i
             group.addElement(new DynamicGuiElement('i', (viewer) -> new StaticGuiElement('i',
-                    GroupItems.getGroupItem(farmer, item),
+                    GroupItems.getGroupItem(farmer, item, player),
                     1,
                     click -> handleItemClick(player, farmer, item, click.getType(), gui))));
         }
@@ -114,8 +114,6 @@ public class MainGui {
             return true;
 
         if (clickType.equals(ClickType.SHIFT_RIGHT)) {
-            if (slotItem.getPrice() < 0)
-                return true;
             Bukkit.getPluginManager().callEvent(new FarmerItemSellEvent(farmer, slotItem, player));
         } else if (!clickType.equals(ClickType.RIGHT) && !clickType.equals(ClickType.LEFT)) {
             Bukkit.getPluginManager().callEvent(

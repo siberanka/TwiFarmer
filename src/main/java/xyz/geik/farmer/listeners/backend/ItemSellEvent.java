@@ -9,8 +9,12 @@ import xyz.geik.farmer.Main;
 import xyz.geik.farmer.api.handlers.FarmerItemSellEvent;
 import xyz.geik.farmer.model.Farmer;
 import xyz.geik.farmer.model.inventory.FarmerItem;
+import xyz.geik.farmer.pricing.PricingManager;
 import xyz.geik.glib.chat.ChatUtils;
 import xyz.geik.glib.chat.Placeholder;
+
+import java.util.OptionalDouble;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * ItemSellEvent listener class
@@ -19,6 +23,8 @@ import xyz.geik.glib.chat.Placeholder;
  * @since 1.0.0
  */
 public class ItemSellEvent implements Listener {
+
+    private static final AtomicBoolean INVALID_TAX_LOGGED = new AtomicBoolean();
 
     /**
      * Constructor of class
@@ -34,25 +40,72 @@ public class ItemSellEvent implements Listener {
     public void sellItemEvent(@NotNull FarmerItemSellEvent event) {
         FarmerItem slotItem = event.getFarmerItem();
         Farmer farmer = event.getFarmer();
-        if (slotItem.getAmount() == 0)
+        double taxRate = farmer.getLevel().getTax();
+        if (!Double.isFinite(taxRate) || taxRate < 0D || taxRate > 100D) {
+            if (INVALID_TAX_LOGGED.compareAndSet(false, true))
+                Main.getInstance().getLogger().severe(
+                        "Farmer sale rejected because a configured level tax is outside 0-100.");
+            sendIfOnline(event, Main.getLangFile().getMessages().getSellPaymentFailed());
             return;
-        // Calculating tax, profit and selling price
-        double sellPrice = slotItem.getPrice() * slotItem.getAmount();
-        double profit = (farmer.getLevel().getTax() > 0)
-                ? sellPrice-(sellPrice*farmer.getLevel().getTax()/100)
+        }
+        long soldAmount;
+        double sellPrice = 0D;
+        boolean priceUnavailable = false;
+        synchronized (slotItem) {
+            soldAmount = slotItem.getAmount();
+            if (soldAmount <= 0)
+                return;
+            OptionalDouble totalPrice = Main.getPricingManager()
+                    .getSellPrice(event.getOfflinePlayer(), slotItem, soldAmount);
+            if (!totalPrice.isPresent() || totalPrice.getAsDouble() > PricingManager.MAX_SELL_PRICE) {
+                priceUnavailable = true;
+            } else {
+                sellPrice = totalPrice.getAsDouble();
+                // Claim the stock before touching the economy so concurrent triggers cannot double-sell it.
+                slotItem.setAmount(0);
+            }
+        }
+        if (priceUnavailable) {
+            sendIfOnline(event, Main.getLangFile().getMessages().getSellPriceUnavailable(),
+                    new Placeholder("{source}", Main.getPricingManager().getActiveProviderId()));
+            return;
+        }
+
+        // Calculating tax and final profit.
+        double profit = (taxRate > 0)
+                ? sellPrice-(sellPrice*taxRate/100)
                 : sellPrice;
-        double tax = (sellPrice == profit) ? 0 : sellPrice*farmer.getLevel().getTax()/100;
-        // If configuration has deposit tax to
-        // defined player then it will deposit it
-        // to player.
-        if (Main.getConfigFile().getTax().isDeposit())
-            Main.getEconomy().depositPlayer(Bukkit.getOfflinePlayer(Main.getConfigFile().getTax().getDepositUser()), tax);
-        Main.getEconomy().depositPlayer(event.getOfflinePlayer(), profit);
-        slotItem.setAmount(0);
-        if (event.getOfflinePlayer().isOnline())
-            ChatUtils.sendMessage(event.getOfflinePlayer().getPlayer(), Main.getLangFile().getMessages().getSellComplate(),
-                    new Placeholder("{money}", roundDouble(profit)),
-                    new Placeholder("{tax}", roundDouble(tax)));
+        double tax = (sellPrice == profit) ? 0 : sellPrice*taxRate/100;
+        try {
+            Main.getEconomy().depositPlayer(event.getOfflinePlayer(), profit);
+        } catch (RuntimeException | LinkageError exception) {
+            synchronized (slotItem) {
+                slotItem.sumAmount(soldAmount);
+            }
+            Main.getInstance().getLogger().severe("Farmer sale payout failed: "
+                    + exception.getClass().getSimpleName());
+            sendIfOnline(event, Main.getLangFile().getMessages().getSellPaymentFailed());
+            return;
+        }
+
+        if (Main.getConfigFile().getTax().isDeposit() && tax > 0D) {
+            try {
+                Main.getEconomy().depositPlayer(
+                        Bukkit.getOfflinePlayer(Main.getConfigFile().getTax().getDepositUser()), tax);
+            } catch (RuntimeException | LinkageError exception) {
+                // The seller is already paid. Restoring stock here would duplicate value.
+                Main.getInstance().getLogger().severe("Farmer tax deposit failed after seller payout: "
+                        + exception.getClass().getSimpleName());
+            }
+        }
+        sendIfOnline(event, Main.getLangFile().getMessages().getSellComplate(),
+                new Placeholder("{money}", roundDouble(profit)),
+                new Placeholder("{tax}", roundDouble(tax)));
+    }
+
+    private static void sendIfOnline(FarmerItemSellEvent event, String message, Placeholder... placeholders) {
+        if (event.getOfflinePlayer().isOnline() && event.getOfflinePlayer().getPlayer() != null)
+            ChatUtils.sendMessage(event.getOfflinePlayer().getPlayer(), message, placeholders);
     }
 
     /**

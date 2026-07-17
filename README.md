@@ -13,7 +13,7 @@ Farmer is a Paper plugin that collects configured drops inside supported regions
 | Plain Bukkit / Spigot | Not supported; startup is rejected |
 | Geyser / Floodgate | Optional native Bedrock forms |
 
-Farmer v6-b117 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
+Farmer v6-b118 is compiled against Paper API `26.1.2.build.74-stable` while retaining `api-version: "1.21"`. Server scheduling uses Paper/Folia-aware schedulers for player, region, global, and asynchronous work.
 
 ## Features
 
@@ -24,6 +24,44 @@ Farmer v6-b117 is compiled against Paper API `26.1.2.build.74-stable` while reta
 - English and Turkish language files, with module-provided locales supported.
 - Native Bedrock forms without changing the Java inventory experience.
 - Public APIs and Bukkit events for modules and integrations.
+
+## Market Pricing
+
+Farmer can resolve sell values from a server's existing global market instead of maintaining a second price list. The default `pricing.source: auto` selects the first available provider in `pricing.auto-priority`. If no supported market is installed, `auto` safely uses the manual values in `items.yml`.
+
+Built-in pricing adapters:
+
+| Provider ID | Plugin |
+| --- | --- |
+| `ultimateshop` | UltimateShop |
+| `economyshopgui` | EconomyShopGUI and EconomyShopGUI Premium |
+| `shopguiplus` | ShopGUIPlus |
+| `excellentshop` | ExcellentShop |
+| `zshop` | zShop |
+| `guishop` | GUIShop |
+| `essentials` | EssentialsX worth prices |
+| `cmi` | CMI worth prices |
+| `manual` | `items.yml` |
+
+```yaml
+pricing:
+  source: auto
+  auto-priority:
+    - ultimateshop
+    - economyshopgui
+    - shopguiplus
+    - excellentshop
+    - zshop
+    - guishop
+    - essentials
+    - cmi
+```
+
+Set `source` to a provider ID to require that market, or to `manual` to always use `items.yml`. An explicitly selected provider fails closed when unavailable, and items without a valid positive price cannot be sold. Player-specific multipliers and dynamic values are resolved when the menu is rendered and again before payment. At settlement, Farmer passes the exact stocked quantity to market APIs that support quantity-aware quotes, so volume tiers and dynamic sell rules determine the payout; providers without a dynamic quantity API retain their configured static price. Farmer accepts only the provider's Vault-compatible price where a market supports multiple currencies, preventing a points or item price from being deposited as money.
+
+Optional market APIs are not shaded into Farmer. Integrations are loaded only after their plugin is enabled, reflection bindings are resolved once, invalid/non-finite values are rejected, and API failures are logged once per provider to avoid hot-path log flooding. Farmer requests a quote only: it does not invoke a market's inventory-removal or payout transaction, preventing duplicate payouts against Farmer's virtual storage. QuickShop, Shopkeepers, and other player-listing systems are intentionally not auto-selected because they do not expose one authoritative global server sell price.
+
+Modules and external plugins can add a provider through `FarmerPricingAPI.registerProvider(SellPriceProvider)`. Registered IDs can be selected directly or placed in `auto-priority`; the same provider then drives Java menus, Bedrock forms, and final sale settlement.
 
 ## Official Modules
 
@@ -122,7 +160,7 @@ Languages installed through `FarmerModule.setLang(...)` use the same backup-firs
 ## Installation
 
 1. Run Paper, Leaf, or Folia on a Minecraft version supported by this release.
-2. Place `Farmer-v6-b117.jar` in the server's `plugins` directory.
+2. Place `Farmer-v6-b118.jar` in the server's `plugins` directory.
 3. Install Vault and a supported economy provider when economy-backed features are enabled.
 4. Optionally install Geyser and/or Floodgate for native Bedrock forms.
 5. Install a supported region or island plugin and configure allowed worlds.
@@ -140,7 +178,7 @@ The project uses Maven:
 mvn clean package
 ```
 
-The shaded release artifact is written to `target/Farmer-v6-b117.jar`. Geyser and Floodgate APIs are compile-time `provided` dependencies and must remain supplied by the server when Bedrock forms are enabled.
+The shaded release artifact is written to `target/Farmer-v6-b118.jar`. Geyser, Floodgate, and optional market APIs are not bundled and must remain supplied by the server when their integrations are enabled.
 
 ## Contributing
 

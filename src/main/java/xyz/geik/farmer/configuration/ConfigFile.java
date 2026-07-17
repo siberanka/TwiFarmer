@@ -100,6 +100,31 @@ public class ConfigFile extends OkaeriConfig {
     @Comment("Tax settings")
     private Tax tax = new Tax();
 
+    @Comment("Sell price source. Use auto, manual, or a supported provider id")
+    private Pricing pricing = new Pricing();
+
+    /**
+     * Market price provider selection.
+     */
+    @Getter
+    @Setter
+    public static class Pricing extends OkaeriConfig {
+        @Comment("Options: auto, manual, ultimateshop, economyshopgui, shopguiplus, excellentshop, zshop, guishop, essentials, cmi, or a registered custom provider")
+        private String source = "auto";
+
+        @Comment("First available provider is selected when source is auto")
+        private List<String> autoPriority = Arrays.asList(
+                "ultimateshop",
+                "economyshopgui",
+                "shopguiplus",
+                "excellentshop",
+                "zshop",
+                "guishop",
+                "essentials",
+                "cmi"
+        );
+    }
+
     /**
      * Tax settings configuration
      *

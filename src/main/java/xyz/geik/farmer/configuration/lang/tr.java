@@ -46,6 +46,9 @@ public class tr extends LangFile {
 
         @Comment("placeholders: {money} money which deposited to player {tax} tax amount.")
         private String sellComplate = "{prefix} &aEşyalar satıldı. &6Kazanç: &e{money}&f, &6Vergi: &e{tax}";
+        @Comment("placeholder: {source} active pricing provider")
+        private String sellPriceUnavailable = "{prefix} &cBu eşya için {source} kaynağında geçerli bir satış fiyatı yok.";
+        private String sellPaymentFailed = "{prefix} &cSatış tamamlanamadı. Stok miktarı geri yüklendi.";
         private String wrongWorld = "{prefix} &cBunu bu dünyada yapamazsın.";
         private String noRegion = "{prefix} &cÇiftçi koymak için kendi bölgende olman gerek.";
         private String removedFarmer = "{prefix} &aÇiftçi başarıyla silindi.";
